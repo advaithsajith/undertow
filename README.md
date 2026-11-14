@@ -1,20 +1,25 @@
 # UNDERTOW — The Last Monsoon
 
-(Folder is still `theeram/`, the working title.)
-
 First-person zombie survival set on the Kannur coast: Payyambalam beach, Thalap, the lighthouse,
 St. Angelo Fort, Mappila Bay, NH 66, Perumba bridge, Payyanur, the Kavvayi backwaters and Ezhimala.
 
-Run: preview server `theeram` (port 8817) or `python -m http.server 8817 --directory theeram`, then open http://localhost:8817.
-Play it in a normal browser tab for mouse-look (pointer lock); the in-app pane falls back to free mouse + arrow keys.
+## Run
+Serve this folder over HTTP and open it in a desktop browser, for example `python -m http.server 8817`, then
+http://localhost:8817. Click the page to capture the mouse. A Windows desktop build is described at the end.
+
+## Licence
+Copyright (c) 2026 advaithsajith, all rights reserved: you may read the code and play the game, but not copy,
+modify or redistribute it without permission. See `LICENSE`. Bundled libraries and art keep their own licences
+(MIT and CC0), listed in `THIRD-PARTY-NOTICES.md`.
 
 ## Controls
-B switches between over-the-shoulder (default, laser sight while aiming) and first person.
+First person (bodycam) is the default; B switches to over-the-shoulder with a laser sight while aiming.
 WASD move · Shift sprint · C crouch · Space jump · Q dodge · LMB fire · RMB aim · R reload · 1-3 guns · 4 melee
 V quick melee · F kick / execute / stomp / break a grab · G throw · 5 swap throwable · E use · H heal · T torch
-Tab family & fortifications · M map · Esc pause
+X tripmine · Tab family & fortifications · M map · Esc pause
 
 ## Systems
+The sections below are a build log, oldest first; later passes supersede the counts given here.
 - **Rendering** (js/render.js): HDR pipeline (scene → AO → water → tone-map). Water is ray-marched in screen
   space for reflections (sky fallback), refracts with depth absorption, has caustics, shoreline foam and surf
   bands. Sun/moon shadow maps, light shafts, day/night, monsoon rain, lightning. This is screen-space ray
