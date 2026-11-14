@@ -128,20 +128,21 @@
   /* ---------- geometry buckets ---------- */
   const BK = {};
   function bk(name, z) { const band = clamp(((z - W.Z0) / 202) | 0, 0, 9), k = name + band; return BK[k] || (BK[k] = { name, p: [], n: [], u: [], c: [], i: [] }); }
-  function quad(b, ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz, c, u0, v0, u1, v1) {
+  function quad(b, ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz, c, u0, v0, u1, v1, cb) {
     const i = b.p.length / 3, ux = bx - ax, uy = by - ay, uz = bz - az, vx = dx - ax, vy = dy - ay, vz = dz - az;
     let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
     b.p.push(ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz); b.n.push(nx, ny, nz, nx, ny, nz, nx, ny, nz, nx, ny, nz);
-    b.u.push(u0, v0, u1, v0, u1, v1, u0, v1); b.c.push(c.r, c.g, c.b, c.r, c.g, c.b, c.r, c.g, c.b, c.r, c.g, c.b); b.i.push(i, i + 1, i + 2, i, i + 2, i + 3);
+    b.u.push(u0, v0, u1, v0, u1, v1, u0, v1); const e = cb || c; b.c.push(e.r, e.g, e.b, e.r, e.g, e.b, c.r, c.g, c.b, c.r, c.g, c.b); b.i.push(i, i + 1, i + 2, i, i + 2, i + 3);
   }
   function box(name, x, y, z, sx, sy, sz, yaw, c, uvs) {
     const b = bk(name, z), co = Math.cos(yaw), s = Math.sin(yaw), hx = sx / 2, hz = sz / 2, Y = y + sy; uvs = uvs || .4;
+    const gk = (name === 'plaster' || name === 'lat') && sy > .6 ? clamp(.95 - sy * .07, .6, .85) : 0, cb = gk ? { r: c.r * gk, g: c.g * gk * .97, b: c.b * gk * .9 } : null;
     const P = (lx, lz) => [x + lx * co + lz * s, z - lx * s + lz * co];
     const A = P(-hx, hz), Bq = P(hx, hz), C = P(hx, -hz), D = P(-hx, -hz), o = (x * .37 + z * .61) % 1;
-    quad(b, A[0], y, A[1], Bq[0], y, Bq[1], Bq[0], Y, Bq[1], A[0], Y, A[1], c, o, y * uvs, o + sx * uvs, Y * uvs);
-    quad(b, C[0], y, C[1], D[0], y, D[1], D[0], Y, D[1], C[0], Y, C[1], c, o, y * uvs, o + sx * uvs, Y * uvs);
-    quad(b, Bq[0], y, Bq[1], C[0], y, C[1], C[0], Y, C[1], Bq[0], Y, Bq[1], c, o, y * uvs, o + sz * uvs, Y * uvs);
-    quad(b, D[0], y, D[1], A[0], y, A[1], A[0], Y, A[1], D[0], Y, D[1], c, o, y * uvs, o + sz * uvs, Y * uvs);
+    quad(b, A[0], y, A[1], Bq[0], y, Bq[1], Bq[0], Y, Bq[1], A[0], Y, A[1], c, o, y * uvs, o + sx * uvs, Y * uvs, cb);
+    quad(b, C[0], y, C[1], D[0], y, D[1], D[0], Y, D[1], C[0], Y, C[1], c, o, y * uvs, o + sx * uvs, Y * uvs, cb);
+    quad(b, Bq[0], y, Bq[1], C[0], y, C[1], C[0], Y, C[1], Bq[0], Y, Bq[1], c, o, y * uvs, o + sz * uvs, Y * uvs, cb);
+    quad(b, D[0], y, D[1], A[0], y, A[1], A[0], Y, A[1], D[0], Y, D[1], c, o, y * uvs, o + sz * uvs, Y * uvs, cb);
     quad(b, A[0], Y, A[1], Bq[0], Y, Bq[1], C[0], Y, C[1], D[0], Y, D[1], c, o, o, o + sx * uvs, o + sz * uvs);
   }
   function hip(name, x, y, z, sx, sz, h, yaw, c) {
@@ -188,16 +189,20 @@
     box('lat', x, y0, z, w + .5, .8, d + .5, yaw, K.lat);
     box('plaster', x, y0 + .8, z, w, wh, d, yaw, K[tint]);
     hip('tile', x, y0 + .8 + wh, z, w + 1.6, d + 1.6, 1.9 + d * .09, yaw, R() < .25 ? K.tileD : K.tile);
-    let p = lw(t, 0, d / 2 + .03); box('dark', p[0], y0 + .8, p[1], 1, 2.05, .08, yaw, K.woodD);
+    let p = lw(t, 0, d / 2 + .03); box('wood', p[0], y0 + .8, p[1], 1, 2.05, .08, yaw, K.woodD);
     for (const sx of [-w * .3, w * .3]) { p = lw(t, sx, d / 2 + .03); box('dark', p[0], y0 + 1.8, p[1], 1.1, 1.1, .08, yaw, o.lit && R() < .5 ? K.glow : K.dark); }
     p = lw(t, w / 2 + .03, 0); box('dark', p[0], y0 + 1.8, p[1], .08, 1.1, 1.1, yaw, K.dark);
+    for (const sx of [-w * .3, w * .3]) { p = lw(t, sx, d / 2 + .3); box('plaster', p[0], y0 + 2.98, p[1], 1.75, .07, .6, yaw, K.white); }
+    p = lw(t, w / 2 + .3, 0); box('plaster', p[0], y0 + 2.98, p[1], .6, .07, 1.75, yaw, K.white);
+    for (const sx of [-w * .25, w * .25]) { p = lw(t, sx, -d / 2 - .03); box('dark', p[0], y0 + 1.8, p[1], 1, 1.05, .08, yaw, K.dark); p = lw(t, sx, -d / 2 - .1); box('paint', p[0], y0 + 1.7, p[1], 1.3, .1, .16, yaw, K.conc); p = lw(t, sx, -d / 2 - .3); box('plaster', p[0], y0 + 2.98, p[1], 1.6, .07, .6, yaw, K.white); }
+    p = lw(t, -w / 2 - .03, 0); box('dark', p[0], y0 + 1.8, p[1], .08, 1.05, 1, yaw, K.dark); p = lw(t, -w / 2 - .3, 0); box('plaster', p[0], y0 + 2.98, p[1], .6, .07, 1.6, yaw, K.white);
     // sit-out porch
     p = lw(t, 0, d / 2 + 1.3); hip('tile', p[0], y0 + 3.1, p[1], 4.2, 3, .9, yaw, K.tile); box('lat', p[0], y0, p[1], 3.6, .75, 2.4, yaw, K.latD);
     for (const sx of [-1.6, 1.6]) { const q = lw(t, sx, d / 2 + 2.3); cyl('paint', q[0], y0 + .7, q[1], .11, .11, 2.4, 6, K.white); G.addCircle(q[0], q[1], .14, y0 + 3.2); }
     // detail: shutters, sills, grilles, door frame, steps, eave boards, water tank, tulsi thara, compound wall, upper storey
-    for (const sx of [-w * .3, w * .3]) { for (const sd of [-.72, .72]) { p = lw(t, sx + sd, d / 2 + .06); box('paint', p[0], y0 + 1.74, p[1], .3, 1.22, .05, yaw, K.woodD); } p = lw(t, sx, d / 2 + .1); box('paint', p[0], y0 + 1.68, p[1], 1.5, .1, .16, yaw, K.conc); for (let i = -1; i <= 1; i++) { const q = lw(t, sx + i * .28, d / 2 + .07); box('paint', q[0], y0 + 1.8, q[1], .03, 1.1, .03, yaw, K.black); } }
-    p = lw(t, 0, d / 2 + .05); box('paint', p[0], y0 + .8, p[1], 1.24, 2.2, .06, yaw, K.wood); p = lw(t, 0, d / 2 + 2.9); box('lat', p[0], y0, p[1], 2.2, .4, .8, yaw, K.latD);
-    for (const q of [[0, d / 2 + .78, w + 1.5, .1], [0, -d / 2 - .78, w + 1.5, .1], [w / 2 + .78, 0, .1, d + 1.5], [-w / 2 - .78, 0, .1, d + 1.5]]) { p = lw(t, q[0], q[1]); box('paint', p[0], y0 + .62 + wh, p[1], q[2], .2, q[3], yaw, K.woodD); }
+    for (const sx of [-w * .3, w * .3]) { for (const sd of [-.72, .72]) { p = lw(t, sx + sd, d / 2 + .06); box('wood', p[0], y0 + 1.74, p[1], .3, 1.22, .05, yaw, R() < .5 ? K.woodD : K.wood); } p = lw(t, sx, d / 2 + .1); box('paint', p[0], y0 + 1.68, p[1], 1.5, .1, .16, yaw, K.conc); for (let i = -1; i <= 1; i++) { const q = lw(t, sx + i * .28, d / 2 + .07); box('paint', q[0], y0 + 1.8, q[1], .03, 1.1, .03, yaw, K.black); } }
+    p = lw(t, 0, d / 2 + .05); box('wood', p[0], y0 + .8, p[1], 1.24, 2.2, .06, yaw, K.wood); p = lw(t, 0, d / 2 + 2.9); box('lat', p[0], y0, p[1], 2.2, .4, .8, yaw, K.latD);
+    for (const q of [[0, d / 2 + .78, w + 1.5, .1], [0, -d / 2 - .78, w + 1.5, .1], [w / 2 + .78, 0, .1, d + 1.5], [-w / 2 - .78, 0, .1, d + 1.5]]) { p = lw(t, q[0], q[1]); box('wood', p[0], y0 + .62 + wh, p[1], q[2], .2, q[3], yaw, K.woodD); }
     const rv = R();
     if (rv < .5) { p = lw(t, -w / 2 - 1.6, -d / 4); for (const q of [[-.5, -.5], [.5, -.5], [-.5, .5], [.5, .5]]) { const u = lw(t, -w / 2 - 1.6 + q[0], -d / 4 + q[1]); cyl('paint', u[0], y0, u[1], .05, .05, 3.6, 4, K.steel); } cyl('paint', p[0], y0 + 3.6, p[1], .75, .7, 1.2, 10, K.black, true); G.addCircle(p[0], p[1], .8, y0 + 4.8); }
     if (rv > .35) { p = lw(t, -w * .32, d / 2 + 4.2); box('plaster', p[0], y0 + .3, p[1], .8, .9, .8, yaw, K.white); box('plaster', p[0], y0 + 1.2, p[1], .5, .3, .5, yaw, K.white); blobs.push([p[0], y0 + 1.9, p[1], .45, .55, .45, 0x3a7a2a]); G.addCircle(p[0], p[1], .5, y0 + 1.6); }
@@ -281,7 +286,7 @@
     return G.addBox(mx, mz, L / 2, th / 2, yaw, g, top, 'wall');
   }
   function tree(x, z, s) {
-    const g = G.hAt(x, z); cyl('paint', x, g - .3, z, .28 * s, .18 * s, 3.2 * s, 6, K.woodD); G.addCircle(x, z, .3 * s, g + 3 * s, 'tree');
+    const g = G.hAt(x, z); cyl('bark', x, g - .3, z, .28 * s, .18 * s, 3.2 * s, 8, K.woodD); cyl('bark', x + .5 * s, g + 2.2 * s, z, .1 * s, .05 * s, 1.6 * s, 5, K.woodD); cyl('bark', x - .4 * s, g + 2.4 * s, z + .3 * s, .09 * s, .05 * s, 1.4 * s, 5, K.woodD); G.addCircle(x, z, .3 * s, g + 3 * s, 'tree');
     const gc = [0x2f5a22, 0x3a6a26, 0x274d1e, 0x40702a];
     for (let i = 0; i < 4; i++) blobs.push([x + rr(-1.6, 1.6) * s, g + (3.4 + rr(0, 1.8)) * s, z + rr(-1.6, 1.6) * s, rr(1.8, 2.8) * s, rr(1.4, 2) * s, rr(1.8, 2.8) * s, rp(gc)]);
   }
@@ -349,6 +354,19 @@
     M.lat.map = T('large_sandstone_blocks_01_diff', 1); M.lat.normalMap = T('large_sandstone_blocks_01_nor_gl'); M.lat.color.setScalar(1.5);
     M.plaster.map = T('painted_plaster_wall_diff', 1); M.plaster.normalMap = T('painted_plaster_wall_nor_gl'); M.plaster.color.setScalar(1.3); M.plaster.normalScale.set(.6, .6);
     M.tile.map = T('clay_roof_tiles_02_diff', 1); M.tile.normalMap = T('clay_roof_tiles_02_nor_gl'); M.tile.color.setScalar(1.5);
+    M.wood = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .85, map: T('distressed_painted_planks_diff', 1), normalMap: T('distressed_painted_planks_nor_gl') }); M.wood.color.setScalar(1.7);
+    M.bark = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95, map: T('bark_brown_02_diff', 1), normalMap: T('bark_brown_02_nor_gl') }); M.bark.color.setScalar(2.2);
+    { const peel = T('peeling_painted_wall_diff', 1), peelN = T('peeling_painted_wall_nor_gl');
+      M.plaster.onBeforeCompile = sh => { sh.uniforms.tPeel = { value: peel }; sh.uniforms.tNz = { value: G.noiseTex };
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWp;').replace('#include <project_vertex>', '#include <project_vertex>\nvWp = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D tPeel, tNz; varying vec3 vWp;').replace('#include <map_fragment>', `#include <map_fragment>
+          float nA = texture2D(tNz, vWp.xz * .009 + vWp.y * .004).r * .6 + texture2D(tNz, (vWp.xz + vWp.y) * .06).r * .4;
+          float peelM = smoothstep(.62, .74, nA) * .6;
+          vec3 pc = texture2D(tPeel, vUv * .8).rgb; pc *= pc; pc = mix(vec3(dot(pc, vec3(.3, .59, .11))), pc, .5);
+          diffuseColor.rgb = mix(diffuseColor.rgb, diffuse * pc * 1.15, peelM * .9);
+          float sk = texture2D(tNz, vec2((vWp.x + vWp.z) * .5, vWp.y * .012)).r;
+          diffuseColor.rgb *= 1. - smoothstep(.6, .93, sk) * .3;`); };
+      M.plaster.customProgramCacheKey = () => 'plasterPeel'; }
     return M;
   }
 
@@ -658,11 +676,20 @@
     for (const k in BK) { const b = BK[k], g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(b.n, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(b.u, 2)); g.setAttribute('color', new THREE.Float32BufferAttribute(b.c, 3)); g.setIndex(b.i); g.computeBoundingSphere(); const m = new THREE.Mesh(g, M[b.name]); m.castShadow = b.name !== 'glow' && b.name !== 'sign'; m.receiveShadow = true; m.matrixAutoUpdate = false; grp.add(m); delete BK[k]; }
     // palms (two levels of detail)
     const mkTrunk = (NR, NA) => { const tp = [], ti = [], tu = []; for (let j = 0; j <= NR; j++) { const t = j / NR, r = .02 * (1.25 - .45 * t) * (j === 0 ? 1.5 : 1); for (let i = 0; i <= NA; i++) { const a = i / NA * TAU; tp.push(.12 * t * t + Math.cos(a) * r, t, Math.sin(a) * r); tu.push(i / NA, t * 4); } } for (let j = 0; j < NR; j++) for (let i = 0; i < NA; i++) { const a = j * (NA + 1) + i; ti.push(a, a + NA + 1, a + 1, a + 1, a + NA + 1, a + NA + 2); } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(tp, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(tu, 2)); g.setIndex(ti); g.computeVertexNormals(); return g; };
-    const mkCrown = (NF, NS) => { const cp = [], cu = [], ci = []; for (let f = 0; f < NF; f++) { const a = f / NF * TAU + (f % 2) * .25, L = 3.3 + (f % 3) * .45, lift = f % 2 ? .5 : 1.0, ca = Math.cos(a), sa = Math.sin(a), b0 = cp.length / 3; for (let s = 0; s <= NS; s++) { const t = s / NS, r = L * t, y = lift * 1.7 * t - 2.5 * t * t * (1.15 - lift * .35), w = .7 * Math.pow(Math.sin(Math.PI * (.08 + .9 * t)), .7) * (NF < 10 ? 1.5 : 1); cp.push(ca * r - sa * w, y - .4 * w, sa * r + ca * w, ca * r, y, sa * r, ca * r + sa * w, y - .4 * w, sa * r - ca * w); cu.push(0, t, .5, t, 1, t); } for (let s = 0; s < NS; s++) { const q = b0 + s * 3; ci.push(q, q + 3, q + 1, q + 1, q + 3, q + 4, q + 1, q + 4, q + 2, q + 2, q + 4, q + 5); } } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(cp, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(cu, 2)); g.setIndex(ci); g.computeVertexNormals(); return g; };
-    const tg = mkTrunk(7, 6), cg = mkCrown(13, 6), tgL = mkTrunk(2, 3), cgL = mkCrown(7, 2);
-    const ft = canvasTex(64, 256, (c, w, h) => { c.clearRect(0, 0, w, h); c.lineCap = 'round'; for (let y = 0; y < h; y += 5) { const g = 90 + (y * 7 % 60); c.strokeStyle = `rgb(${g * .45 | 0},${g},${g * .25 | 0})`; c.lineWidth = 3.4; c.beginPath(); c.moveTo(32, y + 8); c.lineTo(1, y - 6); c.moveTo(32, y + 8); c.lineTo(63, y - 6); c.stroke(); } c.strokeStyle = '#6a7a30'; c.lineWidth = 3; c.beginPath(); c.moveTo(32, 0); c.lineTo(32, h); c.stroke(); }, { repeat: false });
+    const mkCrown = (NF, NS) => { const cp = [], cu = [], ci = []; for (let f = 0; f < NF; f++) { const dead = NF > 9 && f % 6 === 5, u0 = dead ? .5 : 0, a = f / NF * TAU + (f % 2) * .25, L = (3.3 + (f % 3) * .45) * (dead ? .85 : 1), lift = dead ? -.9 : f % 2 ? .5 : 1.0, ca = Math.cos(a), sa = Math.sin(a), b0 = cp.length / 3; for (let s = 0; s <= NS; s++) { const t = s / NS, r = L * t, y = lift * 1.7 * t - 2.5 * t * t * (1.15 - lift * .35), w = .7 * Math.pow(Math.sin(Math.PI * (.08 + .9 * t)), .7) * (NF < 10 ? 1.5 : 1); cp.push(ca * r - sa * w, y - .4 * w, sa * r + ca * w, ca * r, y, sa * r, ca * r + sa * w, y - .4 * w, sa * r - ca * w); cu.push(u0, t, u0 + .25, t, u0 + .5, t); } for (let s = 0; s < NS; s++) { const q = b0 + s * 3; ci.push(q, q + 3, q + 1, q + 1, q + 3, q + 4, q + 1, q + 4, q + 2, q + 2, q + 4, q + 5); } } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(cp, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(cu, 2)); g.setIndex(ci); g.computeVertexNormals(); return g; };
+    const tg = mkTrunk(8, 8), cg = mkCrown(18, 8), tgL = mkTrunk(2, 3), cgL = mkCrown(7, 2);
+    const nutG = (() => { const pp = [], nn = []; for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + .3, g = new THREE.IcosahedronGeometry(.12 + (k % 3) * .015, 1).toNonIndexed(), p = g.attributes.position, n = g.attributes.normal; for (let i = 0; i < p.count; i++) { pp.push(p.getX(i) + Math.cos(a) * .2, p.getY(i) * 1.12 - .25 - (k % 2) * .12, p.getZ(i) + Math.sin(a) * .2); nn.push(n.getX(i), n.getY(i), n.getZ(i)); } } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nn, 3)); return g; })();
+    const nutM = new THREE.MeshStandardMaterial({ color: 0x5f6a2a, roughness: .55 });
+    const ft = canvasTex(256, 512, (c, w, h) => { c.clearRect(0, 0, w, h); const rq = mulberry(9); c.lineCap = 'round';
+      for (const [ox, dead] of [[0, 0], [128, 1]]) { const mx = ox + 64;
+        for (let y = h - 6; y > 4; y -= 5) { const ta = 1 - y / h, L = 60 * Math.pow(Math.sin(Math.PI * (.05 + .9 * ta)), .75) + 3;
+          for (const sd of [-1, 1]) { const ex = mx + sd * L * .97, ey = y - L * .42 - rq() * 4, sh = .8 + rq() * .35;
+            const g = c.createLinearGradient(mx, y, ex, ey); if (dead) { g.addColorStop(0, `rgb(${120 * sh | 0},${88 * sh | 0},${48 * sh | 0})`); g.addColorStop(1, `rgb(${165 * sh | 0},${128 * sh | 0},${72 * sh | 0})`); } else { g.addColorStop(0, `rgb(${58 * sh | 0},${100 * sh | 0},${30 * sh | 0})`); g.addColorStop(.7, `rgb(${96 * sh | 0},${150 * sh | 0},${46 * sh | 0})`); g.addColorStop(1, rq() < .25 ? `rgb(${150 * sh | 0},${150 * sh | 0},${70 * sh | 0})` : `rgb(${110 * sh | 0},${160 * sh | 0},${52 * sh | 0})`); }
+            c.strokeStyle = g; c.lineWidth = 3.4 - ta * 1.2; c.beginPath(); c.moveTo(mx, y); c.quadraticCurveTo(mx + sd * L * .5, y - L * .12, ex, ey); c.stroke(); } }
+        c.fillStyle = dead ? '#7a5a30' : '#7c8a3a'; c.beginPath(); c.moveTo(mx - 4, h); c.lineTo(mx + 4, h); c.lineTo(mx + .8, 0); c.lineTo(mx - .8, 0); c.fill(); }
+    }, { repeat: false });
     const tm = new THREE.MeshStandardMaterial({ color: new THREE.Color(1.25, 1.2, 1.1), roughness: .95, map: G.T('palm_tree_bark_diff', 1), normalMap: G.T('palm_tree_bark_nor_gl') });
-    const cm = new THREE.MeshStandardMaterial({ map: ft, alphaTest: .4, side: THREE.DoubleSide, roughness: .7 });
+    const cm = new THREE.MeshStandardMaterial({ map: ft, alphaTest: .4, side: THREE.DoubleSide, roughness: .7 }); cm.color.setScalar(1.4);
     G.windU = { uTime: { value: 0 }, uWind: { value: .5 } };
     const sway = sh => { Object.assign(sh.uniforms, G.windU); sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime,uWind;').replace('#include <begin_vertex>', '#include <begin_vertex>\n float ph = instanceMatrix[3].x*.31 + instanceMatrix[3].z*.17; float amp = length(position.xz)*uWind; transformed.y += sin(uTime*1.7+ph+position.x*.8)*.07*amp; transformed.x += sin(uTime*1.1+ph)*.05*amp + uWind*.06*amp; transformed.z += cos(uTime*1.3+ph*1.3)*.04*amp;'); };
     cm.onBeforeCompile = sway;
@@ -675,9 +702,9 @@
       const bs = sphere(arr, 2, 14), ch = { c: bs.center, r: bs.radius, hi: [], lo: [], far: 780 };
       for (const lod of [0, 1]) {
         const g1 = (lod ? tgL : tg).clone(), g2 = (lod ? cgL : cg).clone(); g1.boundingSphere = bs; g2.boundingSphere = bs;
-        const tr = new THREE.InstancedMesh(g1, tm, arr.length), cr = new THREE.InstancedMesh(g2, cm, arr.length);
-        arr.forEach((p, i) => { q.setFromAxisAngle(up, p[5]); const k = 8 * p[6]; m4.compose(v.set(p[0], p[1] - .3, p[2]), q, s.set(k * p[4], p[3], k)); tr.setMatrixAt(i, m4); v.set(.12, 1, 0).applyMatrix4(m4); q.setFromAxisAngle(up, p[5] * 3); m4.compose(v, q, s.set(p[6] * 1.15, p[6] * 1.15, p[6] * 1.15)); cr.setMatrixAt(i, m4); const gq = .75 + (i * 37 % 10) / 28; cr.setColorAt(i, tc.setRGB(gq * .9, gq, gq * .8)); });
-        tr.castShadow = cr.castShadow = !lod; tr.receiveShadow = !lod; cr.customDepthMaterial = dm; tr.visible = cr.visible = !!lod; grp.add(tr, cr); (lod ? ch.lo : ch.hi).push(tr, cr);
+        const tr = new THREE.InstancedMesh(g1, tm, arr.length), cr = new THREE.InstancedMesh(g2, cm, arr.length), cn = lod ? null : new THREE.InstancedMesh((() => { const g = nutG.clone(); g.boundingSphere = bs; return g; })(), nutM, arr.length);
+        arr.forEach((p, i) => { q.setFromAxisAngle(up, p[5]); const k = 8 * p[6]; m4.compose(v.set(p[0], p[1] - .3, p[2]), q, s.set(k * p[4], p[3], k)); tr.setMatrixAt(i, m4); v.set(.12, 1, 0).applyMatrix4(m4); q.setFromAxisAngle(up, p[5] * 3); m4.compose(v, q, s.set(p[6] * 1.15, p[6] * 1.15, p[6] * 1.15)); cr.setMatrixAt(i, m4); if (cn) cn.setMatrixAt(i, m4); const gq = .75 + (i * 37 % 10) / 28; cr.setColorAt(i, tc.setRGB(gq * .9, gq, gq * .8)); });
+        tr.castShadow = cr.castShadow = !lod; tr.receiveShadow = !lod; cr.customDepthMaterial = dm; tr.visible = cr.visible = !!lod; grp.add(tr, cr); (lod ? ch.lo : ch.hi).push(tr, cr); if (cn) { cn.castShadow = true; cn.visible = false; grp.add(cn); ch.hi.push(cn); }
       }
       veg.push(ch);
     });
@@ -686,7 +713,20 @@
     const igL = new THREE.IcosahedronGeometry(1.05, 0);
     for (const g of [ig, igL]) { const p = g.attributes.position, n = g.attributes.normal, v3 = new THREE.Vector3(); for (let i = 0; i < p.count; i++) { v3.fromBufferAttribute(p, i).normalize(); v3.y = v3.y * .7 + .3; v3.normalize(); n.setXYZ(i, v3.x, v3.y, v3.z); } }
     const bm = new THREE.MeshStandardMaterial({ roughness: .9 });
-    cells(blobs, 2).forEach(arr => { const bs = sphere(arr, 2, 5), ch = { c: bs.center, r: bs.radius, hi: [], lo: [], far: 520 }; for (const lod of [0, 1]) { const g = (lod ? igL : ig).clone(); g.boundingSphere = bs; const im = new THREE.InstancedMesh(g, bm, arr.length); arr.forEach((b, i) => { q.setFromAxisAngle(up, i * 1.7); m4.compose(v.set(b[0], b[1], b[2]), q, s.set(b[3], b[4], b[5])); im.setMatrixAt(i, m4); im.setColorAt(i, tc.set(b[6]).convertSRGBToLinear()); }); im.castShadow = !lod; im.receiveShadow = !lod; im.visible = !!lod; grp.add(im); (lod ? ch.lo : ch.hi).push(im); } veg.push(ch); });
+    const lt = canvasTex(512, 512, (c, w, h) => { c.clearRect(0, 0, w, h); const rq = mulberry(5);
+      const leaf = (x, y, a, L, W, sh) => { c.save(); c.translate(x, y); c.rotate(a); const gr = c.createLinearGradient(0, -W, 0, W); gr.addColorStop(0, `rgb(${Math.min(255, 196 * sh) | 0},${Math.min(255, 238 * sh) | 0},${Math.min(255, 168 * sh) | 0})`); gr.addColorStop(1, `rgb(${150 * sh | 0},${196 * sh | 0},${120 * sh | 0})`); c.fillStyle = gr; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(L * .45, -W, L, 0); c.quadraticCurveTo(L * .45, W, 0, 0); c.fill(); c.strokeStyle = 'rgba(250,255,230,.3)'; c.lineWidth = 1; c.beginPath(); c.moveTo(1, 0); c.lineTo(L * .9, 0); c.stroke(); c.restore(); };
+      for (let i = 0; i < 460; i++) { const a = rq() * TAU, r = Math.sqrt(rq()) * 196, x = 220 + Math.cos(a) * r, y = 256 + Math.sin(a) * r; leaf(x, y, rq() * TAU, 24 + rq() * 22, 7 + rq() * 5, .62 + rq() * .38 + (1 - r / 196) * .12); }
+      c.save(); c.beginPath(); c.rect(448, 0, 64, 512); c.clip(); c.fillStyle = 'rgb(118,156,92)'; c.fillRect(448, 0, 64, 512); for (let i = 0; i < 220; i++) leaf(440 + rq() * 80, rq() * 512, rq() * TAU, 16 + rq() * 12, 5 + rq() * 3, .6 + rq() * .4); c.restore();
+    }, { repeat: false, aniso: 4 });
+    const lm = new THREE.MeshStandardMaterial({ map: lt, alphaTest: .45, side: THREE.DoubleSide, roughness: .85 }); lm.onBeforeCompile = sway;
+    const ldm = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: lt, alphaTest: .45 });
+    const mkLeaf = (det, NC) => { const pp = [], nn = [], uu = [], rq = mulberry(11), V3 = THREE.Vector3, up = new V3(0, 1, 0);
+      const core = new THREE.IcosahedronGeometry(.8, det).toNonIndexed(), cp2 = core.attributes.position; for (let i = 0; i < cp2.count; i++) { const x = cp2.getX(i), y = cp2.getY(i), z = cp2.getZ(i), l = Math.hypot(x, y * .7 + .3, z) || 1; pp.push(x, y, z); nn.push(x / l, (y * .7 + .3) / l, z / l); uu.push(.885 + .1 * (.5 + Math.atan2(z, x) / TAU), .5 + .45 * y); }
+      for (let k = 0; k < NC; k++) { const n = new V3(rq() * 2 - 1, rq() * 1.6 - .5, rq() * 2 - 1).normalize(), ce = n.clone().multiplyScalar(.55 + rq() * .2), t1 = new V3().crossVectors(n, Math.abs(n.y) > .9 ? new V3(1, 0, 0) : up).normalize(), t2 = new V3().crossVectors(n, t1), sz = .75 + rq() * .25, rot = rq() * TAU, ca = Math.cos(rot) * sz, sa = Math.sin(rot) * sz;
+        const cor = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => ce.clone().addScaledVector(t1, a * ca - b * sa).addScaledVector(t2, a * sa + b * ca)), uv = [[0, 0], [.86, 0], [.86, 1], [0, 1]];
+        for (const j of [0, 1, 2, 0, 2, 3]) { const p = cor[j], l = Math.hypot(p.x, p.y * .7 + .3, p.z) || 1; pp.push(p.x, p.y, p.z); nn.push(p.x / l, (p.y * .7 + .3) / l, p.z / l); uu.push(uv[j][0], uv[j][1]); } }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nn, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uu, 2)); return g; }, leafG = mkLeaf(1, 18), leafGL = mkLeaf(0, 7);
+    cells(blobs, 2).forEach(arr => { const bs = sphere(arr, 2, 5), ch = { c: bs.center, r: bs.radius, hi: [], lo: [], far: 520 }; for (const lod of [0, 1]) { const g = (lod ? leafGL : leafG).clone(); g.boundingSphere = bs; const im = new THREE.InstancedMesh(g, lm, arr.length); if (!lod) im.customDepthMaterial = ldm; arr.forEach((b, i) => { q.setFromAxisAngle(up, i * 1.7); m4.compose(v.set(b[0], b[1], b[2]), q, s.set(b[3], b[4], b[5])); im.setMatrixAt(i, m4); im.setColorAt(i, tc.set(b[6]).convertSRGBToLinear()); }); im.castShadow = !lod; im.receiveShadow = !lod; im.visible = !!lod; grp.add(im); (lod ? ch.lo : ch.hi).push(im); } veg.push(ch); });
     G.updateVeg = cam => { for (const ch of veg) { const d = Math.hypot(cam.x - ch.c.x, cam.z - ch.c.z) - ch.r, hi = d < 95, on = d < ch.far; for (const m of ch.hi) m.visible = hi; for (const m of ch.lo) m.visible = !hi && on; } };
     grp.updateMatrixWorld(true);
     G.worldStats = { palms: palms.length, blobs: blobs.length, boxes: boxes.length, circles: circles.length, loot: G.lootPts.length };

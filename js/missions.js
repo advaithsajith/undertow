@@ -108,6 +108,7 @@
   function enterStep() {
     const S = G.S, m = MS[S.mission]; clearInters(); M.cur = m; M.st = null; M.target = null; M.text = ''; if (!m) { M.text = S.flags.won ? 'Free roam — the coast is yours' : ''; return; }
     const s = M.st = m.steps[S.step]; S.mv = { k0: G.Z.kills, t: s.time || 0, wave: 2, got: [] }; M.text = s.text;
+    { const P = G.P; if (P.alive) S.cp = S.mission === 0 && S.step === 0 ? [G.poi.start.x, G.poi.start.z, -1.25] : [P.x, P.z, P.yaw]; }
     if (s.at && s.t !== 'multi') M.target = poi(s.at);
     if (s.t === 'use') inters.push(G.addInter({ x: M.target.x, z: M.target.z, r: 2.8, hold: s.hold, label: s.label, fn: () => { if (s.done) s.done(); advance(); } }));
     if (s.t === 'multi') G.poi[s.at].forEach((p, i) => inters.push(G.addInter({ x: p.x, z: p.z, r: 2.6, hold: s.hold, label: s.label, on: () => !S.mv.got.includes(i), fn: () => { S.mv.got.push(i); G.Audio.click(.5); G.UI.msg(`${s.label}: ${S.mv.got.length}/${G.poi[s.at].length}`, 'gold'); if (S.mv.got.length >= G.poi[s.at].length) advance(); } })));
@@ -127,7 +128,7 @@
     if (!s) return; const v = S.mv;
     if (s.t === 'go') { if (dist2(P.x, P.z, M.target.x, M.target.z) < s.r * s.r) advance(); }
     else if (s.t === 'kill') { const n = G.Z.kills - v.k0; M.text = `${s.text}  ${Math.min(n, s.n)}/${s.n}`; if (n >= s.n) advance(); }
-    else if (s.t === 'clear') { const n = G.Z.alive('m'); M.text = `${s.text} — ${n} left`; M.target = null; if (n > 0) { let b = null, bd = 1e9; for (const z of G.Z.list) if (z.tag === 'm' && z.state !== 'dead') { const d = dist2(z.x, z.z, P.x, P.z); if (d < bd) { bd = d; b = z; } } if (b) M.target = { x: b.x, z: b.z }; } else advance(); }
+    else if (s.t === 'clear') { const n = G.Z.alive('m'); if (n > 0 && n <= 4 && (v.ht = (v.ht || 0) - dt) <= 0) { v.ht = 2; for (const z of G.Z.list) if (z.tag === 'm' && z.state !== 'dead') G.Z.hunt(z); } M.text = `${s.text} — ${n} left`; M.target = null; if (n > 0) { let b = null, bd = 1e9; for (const z of G.Z.list) if (z.tag === 'm' && z.state !== 'dead') { const d = dist2(z.x, z.z, P.x, P.z); if (d < bd) { bd = d; b = z; } } if (b) M.target = { x: b.x, z: b.z }; } else advance(); }
     else if (s.t === 'wait') { if (s.cond()) advance(); }
     else if (s.t === 'defend') {
       const d = Math.hypot(P.x - M.target.x, P.z - M.target.z); if (d < 30) v.t -= dt; M.text = `${s.text} — ${Math.max(0, Math.ceil(v.t))}s${d >= 30 ? '  (GET BACK!)' : ''}`;
@@ -179,21 +180,34 @@
   };
   const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), v4 = new THREE.Vector3(), s4 = new THREE.Vector3(), up4 = new THREE.Vector3(0, 1, 0);
   L.refresh = () => { const S = G.S, d = G.env.day; G.lootPts.forEach((p, i) => { if (S.looted[i] !== undefined && d - S.looted[i] >= 3) delete S.looted[i]; const k = S.looted[i] === undefined ? 1 : .001; q4.setFromAxisAngle(up4, i * 1.3); m4.compose(v4.set(p.x, p.y + .25, p.z), q4, s4.set(k, k, k)); L.mesh.setMatrixAt(i, m4); }); L.mesh.instanceMatrix.needsUpdate = true; };
-  L.open = p => { const S = G.S; S.looted[p.i] = G.env.day; let any = false; for (const [k, a, b, pr] of TAB[p.kind](S)) if (Math.random() < pr) { L.give(k, a + Math.floor(Math.random() * (b - a + 1))); any = true; } if (!any) L.give('scrap', 3); G.Audio.pickup(); m4.makeScale(.001, .001, .001); L.mesh.setMatrixAt(p.i, m4); L.mesh.instanceMatrix.needsUpdate = true; };
+  L.open = p => { const S = G.S; S.looted[p.i] = G.env.day; let any = false; for (const [k, a, b, pr] of TAB[p.kind](S)) if (Math.random() < pr) { L.give(k, a + Math.floor(Math.random() * (b - a + 1))); any = true; } if (!any) L.give('scrap', 3); if (p.kind === 'police' && Math.random() < .35) { const pool = ['revolver', 'smg', 'dbl', 'pump', 'crossbow'].concat(S.fort ? ['insas', 'ak', 'enfield'] : []).filter(id => !S.guns[id]); if (pool.length) L.dropGun(pick(pool), p.x + Math.sin(p.i) * 1.2, p.z + Math.cos(p.i) * 1.2); } G.Audio.pickup(); m4.makeScale(.001, .001, .001); L.mesh.setMatrixAt(p.i, m4); L.mesh.instanceMatrix.needsUpdate = true; };
   let pi = 0;
+  L.guns = [];
+  const GN = { pistol: 'Pistol', revolver: 'Revolver', smg: 'SMG', dbl: 'Double-barrel', pump: 'Pump shotgun', insas: 'INSAS rifle', ak: 'AK-47', enfield: '.303 Enfield', crossbow: 'Crossbow', flamer: 'Flamethrower' };
+  L.dropGun = (id, x, z) => {
+    const g = new THREE.Group(), m = G.Wp.worldGun(id); m.rotation.z = Math.PI / 2; m.scale.setScalar(1.15); g.add(m);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 3.2, 6, 1, true), new THREE.MeshBasicMaterial({ color: 0xffb03b, transparent: true, opacity: .32, depthWrite: false, blending: THREE.AdditiveBlending })); beam.position.y = 1.5; g.add(beam);
+    g.position.set(x, G.groundAt(x, z) + .45, z); G.scene.add(g); L.guns.push({ g, id, life: 150 });
+  };
+  L.takeGun = o => { const S = G.S, W = G.Wp, D = W.DEFS[o.id], mag = D.mag || 10; G.scene.remove(o.g);
+    if (!S.guns[o.id]) { W.give(o.id); const f = S.slots.indexOf(null); if (f >= 0) S.slots[f] = o.id; W.addAmmo(D.ammo, mag * 2); W.rebuild(); G.UI.banner('NEW WEAPON', (GN[o.id] || o.id) + (f >= 0 ? ' · slot ' + (f + 1) : ' · fit it to a slot at the workbench')); }
+    else { W.addAmmo(D.ammo, mag * 2); G.UI.loot('+' + mag * 2 + ' ' + NAMES[D.ammo] + ' (' + (GN[o.id] || o.id) + ')'); } G.Audio.pickup(); };
   L.drop = z => {
     const r = Math.random(), S = G.S; let k = null, n = 0;
+    { const r2 = Math.random(); if ((z.type === 'raider' && r2 < .4) || (z.type === 'guard' && r2 < .55) || (z.type === 'riot' && r2 < .12) || (!z.human && r2 < .015)) L.dropGun(pick(z.type === 'guard' ? ['insas', 'ak', 'smg', 'pump', 'enfield'] : z.type === 'riot' ? ['pump', 'revolver'] : ['smg', 'dbl', 'pump', 'revolver', 'crossbow']), z.x + .6, z.z); }
     if (z.type === 'brute') { k = 'scrap'; n = 30; L.give('frag', 1); } else if (z.type === 'civilian') return; else if ((z.type === 'police' || z.type === 'riot' || z.type === 'raider' || z.type === 'guard') && r < .7) { k = pick(['p', 'p', S.fort ? 'r' : 'p', 's']); n = k === 'p' ? 10 : k === 'r' ? 12 : 4; }
     else if (r < .2) { const own = []; for (const id of S.slots) if (id) own.push(G.Wp.DEFS[id].ammo); k = pick(own.length ? own : ['p']); n = { p: 7, s: 3, r: 9, h: 2 }[k]; } else if (r < .32) { k = 'scrap'; n = 3 + (Math.random() * 5 | 0); } else if (r < .345) { k = 'meds'; n = 1; }
     if (!k) return; const m = L.picks[pi]; pi = (pi + 1) % L.picks.length; m.position.set(z.x, G.groundAt(z.x, z.z) + .3, z.z); m.visible = true; m.userData = { life: 70, k, n };
   };
-  L.update = dt => { const P = G.P; for (const m of L.picks) { if (!m.visible) continue; m.rotation.y += dt * 2; m.userData.life -= dt; if (m.userData.life <= 0) { m.visible = false; continue; } if (dist2(m.position.x, m.position.z, P.x, P.z) < 2.6 && Math.abs(m.position.y - P.y) < 2.5) { m.visible = false; L.give(m.userData.k, m.userData.n); G.Audio.pickup(); } } };
+  L.update = dt => { const P = G.P;
+    for (let i = L.guns.length - 1; i >= 0; i--) { const o = L.guns[i]; o.life -= dt; o.g.rotation.y += dt * 1.6; o.g.children[0].position.y = Math.sin(G.t * 2.4) * .06; if (o.life <= 0) { G.scene.remove(o.g); L.guns.splice(i, 1); continue; } if (P.alive && !P.veh && dist2(o.g.position.x, o.g.position.z, P.x, P.z) < 2.2 && Math.abs(o.g.position.y - P.y) < 2.5) { L.takeGun(o); L.guns.splice(i, 1); } } for (const m of L.picks) { if (!m.visible) continue; m.rotation.y += dt * 2; m.userData.life -= dt; if (m.userData.life <= 0) { m.visible = false; continue; } if (dist2(m.position.x, m.position.z, P.x, P.z) < 2.6 && Math.abs(m.position.y - P.y) < 2.5) { m.visible = false; L.give(m.userData.k, m.userData.n); G.Audio.pickup(); } } };
   const ST = G.Style = { streak: 0, t: 0, last: -9, multi: 0 }, BON = { 'SILENT KILL': 12, ROUNDHOUSE: 8, EXECUTION: 10, 'CURB STOMP': 7, ROADKILL: 4, DECAPITATED: 8, 'CUT DOWN': 3, HEADSHOT: 5, 'HEAD POPPED': 7, BURNED: 3, 'BLOWN APART': 5 };
   G.onKill = (z, o) => {
     const S = G.S; S.stats.kills++; if (z.miss.head) S.stats.heads++; ST.streak++; ST.t = 6; ST.multi = G.t - ST.last < 1.3 ? ST.multi + 1 : 1; ST.last = G.t; if (o.npc) return;
     const h = o.how, tag = h === 'kick' ? 'ROUNDHOUSE' : h === 'silent' ? 'SILENT KILL' : h === 'execute' ? 'EXECUTION' : h === 'stomp' ? 'CURB STOMP' : h === 'road' ? 'ROADKILL' : h === 'blast' ? 'BLOWN APART' : h === 'melee' ? (z.miss.head ? 'DECAPITATED' : 'CUT DOWN') : z.miss.head ? 'HEAD POPPED' : z.lastPart === 'head' ? 'HEADSHOT' : z.burn > 0 ? 'BURNED' : null;
     if (tag) { S.scrap += BON[tag]; G.UI.style(tag, BON[tag]); }
     if (z.human) { if (z.type === 'civilian') { S.morale = Math.max(0, S.morale - 6); G.UI.msg('You killed a survivor. Morale −6', 'red'); } else { const b = z.type === 'guard' ? 12 : 8; S.scrap += b; G.UI.style(z.type === 'guard' ? 'VARUNA GUARD DOWN' : 'RAIDER DOWN', b); } return; }
+    S.scrap += z.type === 'brute' ? 25 : z.type === 'walker' || z.type === 'drowned' ? 1 : 2;
     if (ST.multi === 2) G.UI.style('DOUBLE KILL', 0); else if (ST.multi === 3) { G.UI.style('TRIPLE KILL', 0); G.slowmo(.45, .35); } else if (ST.multi === 5) { G.UI.style('MASSACRE', 0); G.slowmo(.6, .3); }
     if (h === 'execute' || (tag === 'HEAD POPPED' && Math.random() < .25) || z.type === 'brute') G.slowmo(z.type === 'brute' ? .9 : .35, .3);
   };

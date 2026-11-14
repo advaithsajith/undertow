@@ -30,7 +30,7 @@
     v: 3, files: [], scrap: 40, food: 8, meds: 1, frag: 1, molotov: 1, fuel: 0, ammo: { p: 60, s: 0, r: 0, h: 0, b: 0, f: 0 }, bottle: 2, mine: 0, guns: {}, slots: ['pistol', null, null], melee: 'machete', meleeOwned: ['machete'],
     mission: 0, step: 0, mv: {}, flags: {}, lightOn: false, autoOk: false, boat: false, fort: false, noSpawn: false, god: false,
     fam: { achan: { hp: 100, bond: 1, role: 'guard', talk: 0 }, amma: { hp: 100, bond: 1, role: 'cook', talk: 0 }, muthassi: { hp: 100, bond: 1, role: 'rest', talk: 0 }, meenu: { hp: 100, bond: 1, role: 'rest', talk: 0 } },
-    dead: [], gate: { N: 300, E: 300 }, up: { walls: 0, tower: 0, lights: 0, spikes: 0, garden: 0 }, morale: 70, perk: {}, looted: {}, stats: { kills: 0, heads: 0, shots: 0, deaths: 0 }, siegeDay: 0, job: null, hour: 16.9, day: 1
+    dead: [], gate: { N: 300, E: 300 }, up: { walls: 0, tower: 0, lights: 0, spikes: 0, garden: 0 }, morale: 70, perk: {}, looted: {}, stats: { kills: 0, heads: 0, shots: 0, deaths: 0 }, siegeDay: 0, armor: 0, cp: null, job: null, hour: 16.9, day: 1
   });
   B.gateMax = () => 300 + G.S.up.walls * 150;
 
@@ -136,7 +136,10 @@
       s.t = s.final ? 6 : 9; const n = Math.min(s.total - s.spawned, s.final ? 7 : 4 + Math.round(Math.random() * 2)), a = Math.random() * TAU; let made = 0;
       for (let i = 0, t = 0; made < n && t < 60; t++) { const an = a + rnd(-.7, .7), r = rnd(38, 54), x = 230 + Math.cos(an) * r, z = 150 + Math.sin(an) * r; if (G.groundAt(x, z) < .4 || G.blocked(x, z, .7)) continue; const p = Math.random(), ty = s.final && p < .07 ? 'brute' : p < .12 ? 'bloater' : p < .34 ? 'runner' : (s.spawned % 13 === 12 && G.env.day > 2 ? 'brute' : 'walker'); G.Z.spawn(ty, x, z, { siege: true, rise: true, aggro: true }); made++; s.spawned++; }
     }
-    let left = 0; for (const z of G.Z.list) if (z.siege && z.state !== 'dead') left++; s.left = left + (s.total - s.spawned);
+    let left = 0; for (const z of G.Z.list) if (z.siege && z.state !== 'dead') left++;
+    if (s.spawned >= s.total && left > 0) { s.lt = (s.lt || 0) + dt; if (left <= 4) { s.ht = (s.ht || 0) - dt; if (s.ht <= 0) { s.ht = 2; for (const z of G.Z.list) if (z.siege && z.state !== 'dead') G.Z.hunt(z); } }
+      if (s.lt > (left <= 4 ? 60 : 150)) { for (const z of G.Z.list) z.siege = false; left = 0; G.UI.msg('The last of them drift back into the dark', 'dim'); } }
+    s.left = left + (s.total - s.spawned);
     if ((s.spawned >= s.total && left === 0) || (h > 5.4 && h < 12)) {
       B.siegeOn = false; for (const z of G.Z.list) if (z.siege) { z.siege = false; if (h > 5.4 && h < 12 && z.state !== 'dead') z.burn = 9; }
       const rw = 15 + s.total; G.S.scrap += rw; G.S.morale = Math.min(100, G.S.morale + 6); G.UI.banner('THE HOUSE STANDS', `Night survived · +${rw} scrap salvaged from the dead`); if (B.onSiegeEnd) B.onSiegeEnd(s); B.siege = null; G.save && G.save();

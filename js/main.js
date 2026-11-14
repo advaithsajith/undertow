@@ -34,11 +34,15 @@
     G.started = true; G.paused = false; G.Audio.init(); G.lock();
   }
   G.onDeath = () => { const S = G.S; S.stats.deaths++; setTimeout(() => G.UI.dead(), 2200); };
-  G.respawn = () => {
-    const S = G.S, P = G.P, e = G.env; S.scrap = Math.floor(S.scrap * .6); G.Z.clear(); if (G.Base.siegeOn) { G.Base.siegeOn = false; G.Base.siege = null; for (const g of G.Base.gates) { g.hp = Math.max(g.hp, 80); G.Base.syncGate(g); } }
-    if (e.hour > 7) e.day++; e.hour = 7; S.siegeDay = e.day - 1; S.dailyDay = e.day; P.alive = true; P.hp = 70; P.stam = 100; P.grabber = null; P.veh = null; P.teleport(G.poi.house.x - 3, G.poi.house.z - 4, Math.PI); P.pitch = 0;
-    // a mission that was mid-way restarts from its first step
-    S.step = 0; G.M.start(); G.UI.close(); G.UI.msg('You wake at home. 40% of your scrap is gone.', 'red'); G.save();
+  // retry: back to the start of the current objective, same night.  home: wake at home next morning.
+  G.respawn = home => {
+    const S = G.S, P = G.P, e = G.env, cp = !home && S.cp; G.Z.clear(); G.boss = null; if (G.Loot && G.Loot.guns) { for (const o of G.Loot.guns) G.scene.remove(o.g); G.Loot.guns.length = 0; }
+    if (G.Base.siegeOn) { G.Base.siegeOn = false; G.Base.siege = null; for (const g of G.Base.gates) { g.hp = Math.max(g.hp, 80); G.Base.syncGate(g); } if (cp) S.siegeDay = e.day - 1; }
+    P.alive = true; P.stam = 100; P.grabber = null; P.veh = null; P.busy = 0; P.burn = 0; P.pitch = 0; P.recBack = 0;
+    if (cp) { S.scrap = Math.floor(S.scrap * .85); P.hp = 80; P.teleport(cp[0], cp[1], cp[2]); e.hour = (e.hour + .25) % 24; }
+    else { S.scrap = Math.floor(S.scrap * .6); P.hp = 70; if (e.hour > 7) e.day++; e.hour = 7; S.siegeDay = e.day - 1; S.dailyDay = e.day; P.teleport(G.poi.house.x - 3, G.poi.house.z - 4, Math.PI); }
+    for (const id in S.guns) { const D = G.Wp.DEFS[id]; if (G.Wp.st.clip[id] < G.Wp.magSize(id) && S.ammo[D.ammo] < D.mag) G.Wp.addAmmo(D.ammo, D.mag); }
+    G.Wp.st.reloading = 0; G.Wp.st.swing = 0; G.M.start(); G.UI.close(); G.UI.msg(cp ? 'Back at the last checkpoint. 15% of your scrap is gone.' : 'You wake at home. 40% of your scrap is gone.', 'red'); G.save();
   };
   /* test hooks (also handy as cheats from the console) */
   window.stepSim = (sec, dt) => { dt = dt || 1 / 30; const pz = G.paused; G.paused = false; for (let t = 0; t < sec; t += dt) { step(dt); G.endInput(); } G.paused = pz; G.UI.update(dt); G.Foliage.update(); G.render(); return { hour: +G.env.hour.toFixed(2), z: G.Z.list.length, hp: Math.round(G.P.hp), kills: G.Z.kills }; };

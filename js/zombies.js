@@ -39,7 +39,7 @@
   Z.spawn = (type, x, z, o = {}) => {
     const T = TYPES[type], rig = G.Rig.make(look(type)), hs = (o.hpMul || 1) * (1 + Math.min(.6, (G.env.day - 1) * .04));
     const zb = { id: Z.nid++, type, T, rig, x, z, y: Math.max(G.groundAt(x, z), -1.3), yaw: Math.random() * TAU, hp: T.hp * hs, maxHp: T.hp * hs, sp: rnd(T.sp[0], T.sp[1]), r: T.r, state: o.rise ? 'rise' : 'idle', st: 0, ph: Math.random() * 6, seed: Math.random(), mv: 0,
-      php: { head: 40 * hs, armL: 45, armR: 45, legL: 55, legR: 55 }, miss: {}, crawl: false, stag: 0, stunKind: 0, fall: 1, kx: 0, kz: 0, atkCd: rnd(0, .5), atkDur: type === 'brute' ? 1.15 : .95, atkHit: false,
+      php: { head: 28 * hs, armL: 45, armR: 45, legL: 55, legR: 55 }, miss: {}, crawl: false, stag: 0, stunKind: 0, fall: 1, kx: 0, kz: 0, atkCd: rnd(0, .5), atkDur: type === 'brute' ? 1.15 : .95, atkHit: false,
       lean: type === 'brute' ? .3 : rnd(.12, .38), tilt: rnd(-.35, .35), limp: Math.random() < .3, armStyle: (Math.random() * 3) | 0, chasing: false, dT: 99, tgt: null, inv: null, aggro: 0, think: Math.random() * .25, wx: x, wz: z, wt: 0, hx: x, hz: z,
       flx: 0, fly: 0, oy: 0, vy: 0, lastPart: 'torso', stuck: 0, lx: x, lz: z, side: 0, sideT: 0, siege: !!o.siege, tag: o.tag || null, deadT: 0, burn: 0, bleed: 0, bleedPart: null, groan: rnd(1, 8), dp: null, pooled: false };
     if (T.human) { zb.human = true; zb.lean = .03; zb.tilt = 0; zb.limp = false; zb.armStyle = 2; zb.state = 'idle'; zb.shootCd = rnd(.6, 1.6); zb.alert = 0; zb.bl = 0; zb.aimAt = null; zb.flee = false; zb.hurt = d => Z.damage(zb, 'torso', d, 0, 0, 0, { npc: true });
@@ -52,6 +52,8 @@
     rig.root.position.set(x, zb.y, z); G.scene.add(rig.root); Z.list.push(zb); return zb;
   };
   Z.horde = (n, cx, cz, r0, r1, o = {}) => { let made = 0; for (let t = 0; t < n * 12 && made < n; t++) { const a = Math.random() * TAU, r = rnd(r0, r1), x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r; if (G.groundAt(x, z) < .3 || G.blocked(x, z, .6) || (G.Base && G.Base.inside(x, z))) continue; const ty = o.types ? pick(o.types) : pickType(null); Z.spawn(ty, x, z, Object.assign({ rise: true, aggro: true }, o)); made++; } return made; };
+  Z.regroup = z => { const P = G.P; for (let t = 0; t < 30; t++) { const a2 = Math.random() * TAU, r = rnd(22, 32), x = P.x + Math.cos(a2) * r, zz = P.z + Math.sin(a2) * r; if (G.groundAt(x, zz) < .4 || G.blocked(x, zz, .7) || (G.Base && G.Base.inside(x, zz))) continue; z.x = z.lx = x; z.z = z.lz = zz; z.y = G.groundAt(x, zz); z.stk = 0; z.rig.root.position.set(x, z.y, zz); return true; } return false; };
+  Z.hunt = z => { const P = G.P; z.aggro = 30; z.inv = { x: P.x, z: P.z, t: 30 }; if ((z.stk || 0) > 6 || dist2(z.x, z.z, P.x, P.z) > 85 * 85) Z.regroup(z); };
   Z.clear = () => { for (const z of Z.list) G.Rig.dispose(z.rig); Z.list.length = 0; G.P.grabber = null; };
   Z.alive = tag => { let n = 0; for (const z of Z.list) if (z.state !== 'dead' && (!tag || z.tag === tag)) n++; return n; };
 
@@ -106,7 +108,8 @@
     if (z.type === 'riot') { if (part === 'head' && z.armor > 0) { z.armor -= dmg; R.pt(z.rig, 'head', a); G.FX.sparks(a.x, a.y + .15, a.z, -dx, .5, -dz, 4); if (z.armor <= 0) { z.helm.visible = false; G.FX.gib(a.x, a.y + .2, a.z, dx * 4, 4, dz * 4, { scale: 2 }); if (G.UI) G.UI.style('HELMET OFF', 0); } dmg *= .12; } else if (part === 'torso' && !o.heavy && o.how !== 'blast' && o.how !== 'road') dmg *= .3; }
     const mult = part === 'head' ? (z.type === 'brute' ? 1.7 : 3.2) : part === 'torso' ? 1 : .6, d = dmg * mult; z.hp -= d; z.aggro = 20; z.inv = null; z.lastPart = part; if (!o.npc) { z.lkx = G.P.x; z.lkz = G.P.z; } { const fx = Math.sin(z.yaw), fz = Math.cos(z.yaw), f = dx * fx + dz * fz; z.flx = f < 0 ? -.5 : .45; z.fly = (dx * fz - dz * fx) * .7 + (part === 'armL' ? -.4 : part === 'armR' ? .4 : 0); }
     if (part !== 'torso' && !z.miss[part]) { z.php[part] -= dmg * (o.sever || 1); if (part !== 'head' && z.php[part] <= 0 && z.type !== 'brute') sever(z, part, dx, dy, dz); }
-    if (z.hp <= 0) { if (part === 'head' && (dmg >= 34 || Math.random() < .5 || o.sever > 1)) sever(z, 'head', dx, dy, dz); kill(z, dx, dz, o); return true; }
+    const popped = part === 'head' && !o.npc && z.php.head <= 0 && z.type !== 'brute' && z !== G.boss && !(z.type === 'riot' && z.armor > 0);
+    if (z.hp <= 0 || popped) { z.hp = Math.min(z.hp, 0); if (popped || (part === 'head' && (dmg >= 34 || Math.random() < .5 || o.sever > 1))) sever(z, 'head', dx, dy, dz); kill(z, dx, dz, o); return true; }
     if (z.state === 'rise') return false;
     if (z.type !== 'brute' || o.heavy) {
       z.stag += d * (o.stagger || 1);
@@ -177,12 +180,14 @@
     z.chasing = false; z.tgt = null; z.gate = null; z.aimAt = null; z.flee = false; const T = z.T; let nz = null, nd = 1e9;
     for (const o of Z.list) { if (o.human || o.state === 'dead') continue; const d = dist2(o.x, o.z, z.x, z.z); if (d < nd) { nd = d; nz = o; } } nd = Math.sqrt(nd);
     if (!T.hostile) { const thr = nz && nd < 14 ? nz : (dP < 22 && (P.loud > .3 || z.alert > 0)) ? P : null; if (thr) { const dx = z.x - thr.x, dz = z.z - thr.z, d = Math.hypot(dx, dz) || 1; z.gx = z.x + dx / d * 14; z.gz = z.z + dz / d * 14; z.chasing = true; z.flee = true; } else wander(z); return; }
-    let see = false; if (P.alive && dP < 46) { if (dP < 8) see = true; else { const h = G.ray(z.x, z.y + 1.5, z.z, (P.x - z.x) / dP, (P.y - z.y) / dP, (P.z - z.z) / dP, dP); see = !h || h.kind === 'water' || h.t > dP - .6; } } if (see) z.alert = 7;
+    let see = false; if (P.alive && dP < 46) { if (dP < 3) see = true; else { const h = G.ray(z.x, z.y + 1.5, z.z, (P.x - z.x) / dP, (P.y - z.y) / dP, (P.z - z.z) / dP, dP); see = !h || h.kind === 'water' || h.t > dP - .6; } } if (see) z.alert = 7;
     if (z.alert > 0 && P.alive) { const R0 = T.range; z.aimAt = see ? P : null; if (dP > R0 + 5 || !see) { z.gx = P.x; z.gz = P.z; z.chasing = true; } else if (dP < R0 - 6) { z.gx = z.x - (P.x - z.x); z.gz = z.z - (P.z - z.z); z.chasing = true; } else { z.gx = z.x; z.gz = z.z; } }
     else if (nz && nd < 16) { z.aimAt = nz; z.gx = z.x; z.gz = z.z; } else wander(z);
   }
   function hShoot(z, t, td) {
     const P = G.P, T = z.T; R.pt(z.rig, 'handR', a); const dp = Math.hypot(P.x - z.x, P.z - z.z); let hit;
+    { const ty = t === P ? P.y + (P.crouch ? .85 : 1.35) : t.y + 1.2, ex = t.x - a.x, ey = ty - a.y, ez = t.z - a.z, el = Math.hypot(ex, ey, ez) || 1, wh = G.ray(a.x, a.y, a.z, ex / el, ey / el, ez / el, el);
+      if (wh && wh.kind !== 'water' && wh.t < el - .45) { const hx = a.x + ex / el * wh.t, hy = a.y + ey / el * wh.t, hz = a.z + ez / el * wh.t; G.FX.tracer(a.x, a.y, a.z, hx, hy, hz); G.FX.sparks(hx, hy, hz, wh.nx, wh.ny, wh.nz, 4); G.addLight(a.x, a.y, a.z, 0xffb060, 7, 90, 16); if (G.Audio) G.Audio.farShot(dp * .6); if (t === P && dp < 30) P.shake = Math.max(P.shake, .08); return; } }
     if (t === P) hit = P.dodgeT <= 0 && Math.random() < clamp(T.acc - td * .012 - (P.speed > 4.5 ? .18 : 0) - (P.crouch ? .1 : 0) - (P.veh ? .15 : 0), .06, .85); else hit = Math.random() < .6;
     const o = hit ? .15 : 1.3; G.FX.tracer(a.x, a.y, a.z, t.x + rnd(-o, o), t.y + 1.2 + rnd(-o, o) * .6, t.z + rnd(-o, o)); G.addLight(a.x, a.y, a.z, 0xffb060, 7, 90, 16); if (G.Audio) G.Audio.farShot(dp * .6);
     if (!hit) return; if (t === P) P.hurt(T.dmg, z.x, z.z, 'shot'); else { const nx = (t.x - z.x) / (td || 1), nz2 = (t.z - z.z) / (td || 1); G.FX.blood(t.x, t.y + 1.2, t.z, nx, .2, nz2, 5); Z.damage(t, Math.random() < .25 ? 'head' : 'torso', 34, nx, 0, nz2, { npc: true }); }
@@ -262,7 +267,7 @@
       if (z.state !== 'grab') G.resolve(z, z.r, z.y);
       z.y = Math.max(G.groundAt(z.x, z.z), -1.3);
       // stuck → sidestep
-      if (canMove && speed > .3) { z.stuck += e; if (z.stuck > .7) { const m = Math.hypot(z.x - z.lx, z.z - z.lz); if (m < speed * .7 * .3) { z.side = Math.random() < .5 ? 1 : -1; z.sideT = rnd(.9, 1.8); } z.stuck = 0; z.lx = z.x; z.lz = z.z; } }
+      if (canMove && speed > .3) { z.stuck += e; if (z.stuck > .7) { const m = Math.hypot(z.x - z.lx, z.z - z.lz); if (m < speed * .7 * .3) { z.stk = (z.stk || 0) + 1; z.side = Math.random() < .5 ? 1 : -1; z.sideT = rnd(.9, 1.8); } else z.stk = 0; z.stuck = 0; z.lx = z.x; z.lz = z.z; } }
       // fire / bleed
       if (z.burn > 0) { z.burn -= e; G.FX.flame(z.x, z.y + rnd(.3, 1.5), z.z, .8); if ((Z.tick + z.id) % 12 === 0) { G.addLight(z.x, z.y + 1, z.z, 0xff7020, 6, 20, 12); if (Z.damage(z, 'torso', 9, 0, 0, 0, {})) continue; } }
       else if ((Z.tick + z.id) % 10 === 0) for (const f of G.FX.fires) if (dist2(z.x, z.z, f.x, f.z) < f.r * f.r) z.burn = 5;

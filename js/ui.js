@@ -30,8 +30,13 @@
     E.panelC.innerHTML = h;
   }
   /* ---------- workbench ---------- */
+  let field = false;
   function renderBench() {
-    const S = G.S, W = G.Wp, D = W.DEFS; let h = `<h2>WORKBENCH</h2><div class="rs"><div><span>SCRAP</span>${S.scrap}</div><div><span>9MM/.38</span>${S.ammo.p}</div><div><span>SHELLS</span>${S.ammo.s}</div><div><span>RIFLE</span>${S.ammo.r}</div><div><span>.303</span>${S.ammo.h}</div><div><span>GRENADES</span>${S.frag}</div><div><span>PETROL BOMBS</span>${S.molotov}</div></div><div class="bw"><div class="gl"><h3>FIREARMS</h3>`;
+    const S = G.S, W = G.Wp, D = W.DEFS;
+    if (field) { let f = `<h2>FIELD CRAFTING</h2><div class="sub">Craft anywhere from scrap. Guns, attachments and skins need the workbench at home.</div><div class="rs"><div><span>SCRAP</span>${S.scrap}</div><div><span>9MM/.38</span>${S.ammo.p}</div><div><span>SHELLS</span>${S.ammo.s}</div><div><span>RIFLE</span>${S.ammo.r}</div><div><span>FIRST AID</span>${S.meds}</div><div><span>ARMOUR</span>${Math.round(S.armor || 0)}</div></div><div class="gl" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">`;
+      for (const [k, n, c, nm] of CRAFT) f += `<button data-craft="${k}" ${S.scrap < c ? 'disabled' : ''}>${nm}${k === 'armor' ? '' : ' ×' + n}<small>${c} scrap</small></button>`;
+      E.benchC.innerHTML = f + `</div><div style="margin-top:12px"><button data-close>Close (I)</button></div>`; return; }
+    let h = `<h2>WORKBENCH</h2><div class="rs"><div><span>SCRAP</span>${S.scrap}</div><div><span>9MM/.38</span>${S.ammo.p}</div><div><span>SHELLS</span>${S.ammo.s}</div><div><span>RIFLE</span>${S.ammo.r}</div><div><span>.303</span>${S.ammo.h}</div><div><span>GRENADES</span>${S.frag}</div><div><span>PETROL BOMBS</span>${S.molotov}</div></div><div class="bw"><div class="gl"><h3>FIREARMS</h3>`;
     for (const id in D) { const d = D[id], own = S.guns[id], lock = d.lock && !S[d.lock], sl = S.slots.indexOf(id); h += `<button class="${benchSel === id ? 'on' : ''}" data-gun="${id}">${d.name}<small>${own ? (sl >= 0 ? 'slot ' + (sl + 1) : 'owned') : lock ? 'locked' : d.cost + ' scrap'}</small></button>`; }
     h += `<h3>MELEE</h3>`; for (const id in W.MELEE) { const m = W.MELEE[id], own = S.meleeOwned.includes(id); h += `<button class="${S.melee === id ? 'on' : ''}" data-melee="${id}">${m.name}<small>${own ? (S.melee === id ? 'equipped' : 'owned') : m.cost + ' scrap'}</small></button>`; }
     h += `<h3>CRAFT</h3>`; for (const [k, n, c, nm] of CRAFT) h += `<button data-craft="${k}" ${S.scrap < c ? 'disabled' : ''}>${nm} ×${n}<small>${c} scrap</small></button>`;
@@ -46,7 +51,7 @@
     }
     h += `</div></div><div style="margin-top:12px"><button data-close>Close</button></div>`; E.benchC.innerHTML = h;
   }
-  const CRAFT = [['p', 24, 10, '9mm / .38 rounds'], ['s', 8, 10, '12-bore shells'], ['r', 20, 12, 'Rifle rounds'], ['h', 6, 12, '.303 rounds'], ['meds', 1, 25, 'First-aid kit'], ['frag', 1, 30, 'Grenade'], ['molotov', 1, 15, 'Petrol bomb'], ['b', 6, 8, 'Crossbow bolts'], ['f', 60, 10, 'Sprayer fuel'], ['bottle', 3, 3, 'Glass bottles (lure)'], ['mine', 1, 35, 'Tripmine']];
+  const CRAFT = [['armor', 60, 30, 'Scrap armour (soaks half of 60 dmg)'], ['p', 24, 10, '9mm / .38 rounds'], ['s', 8, 10, '12-bore shells'], ['r', 20, 12, 'Rifle rounds'], ['h', 6, 12, '.303 rounds'], ['meds', 1, 25, 'First-aid kit'], ['frag', 1, 30, 'Grenade'], ['molotov', 1, 15, 'Petrol bomb'], ['b', 6, 8, 'Crossbow bolts'], ['f', 60, 10, 'Sprayer fuel'], ['bottle', 3, 3, 'Glass bottles (lure)'], ['mine', 1, 35, 'Tripmine']];
   function benchClick(t) {
     const S = G.S, W = G.Wp, ds = t.dataset; let ok = true;
     if (ds.gun) benchSel = ds.gun;
@@ -55,14 +60,14 @@
     else if (ds.att) { const [sl, o] = ds.att.split(':'), a = W.ATT[sl][o], c = S.guns[benchSel], k = sl + '.' + o; if (a.cost && !c.un[k]) { if (S.scrap < a.cost) return; S.scrap -= a.cost; c.un[k] = 1; } c[sl] = o; }
     else if (ds.skin) { const i = +ds.skin, c = S.guns[benchSel]; if (!c.skins.includes(i)) { if (S.scrap < W.SKINS[i].cost) return; S.scrap -= W.SKINS[i].cost; c.skins.push(i); } c.skin = i; }
     else if (ds.melee) { const m = W.MELEE[ds.melee]; if (!S.meleeOwned.includes(ds.melee)) { if (S.scrap < m.cost) return; S.scrap -= m.cost; S.meleeOwned.push(ds.melee); } S.melee = ds.melee; }
-    else if (ds.craft) { const r = CRAFT.find(x => x[0] === ds.craft); if (S.scrap < r[2]) return; S.scrap -= r[2]; G.Loot.give(r[0], r[1], true); }
+    else if (ds.craft) { const r = CRAFT.find(x => x[0] === ds.craft); if (S.scrap < r[2]) return; S.scrap -= r[2]; if (r[0] === 'armor') { S.armor = Math.min(120, (S.armor || 0) + r[1]); UI.msg('Scrap armour strapped on (' + Math.round(S.armor) + ')', 'green'); } else G.Loot.give(r[0], r[1], true); }
     else ok = false;
     if (ok) { G.Audio.click(.7); W.rebuild(); renderBench(); }
   }
-  UI.bench = () => { const id = G.Wp.curId(); if (id) benchSel = id; renderBench(); modal('bench'); };
+  UI.bench = fld => { field = !!fld; const id = G.Wp.curId(); if (id) benchSel = id; renderBench(); modal('bench'); };
   UI.boat = from => { const J = G.M.jetties(); E.boatL.innerHTML = J.map((j, i) => i === from ? '' : `<button data-sail="${i}">${j.n}</button>`).join(''); modal('boat'); };
   UI.ending = () => { const S = G.S; E.endT.innerHTML = `The fog rolled over Kannur at first light and the coast went quiet. Behind you the Varuna campus is still burning. ${G.Base.members.filter(m => m.alive).length} of the household are alive to see the quarantine lifted.<br><br><b>${S.stats.kills}</b> infected put down · <b>${S.stats.heads}</b> heads taken · <b>${G.env.day}</b> days · ${S.dead.length ? 'lost: ' + S.dead.map(d => G.Base.FAM[d].name).join(', ') : 'nobody left behind'}`; modal('end'); };
-  UI.dead = () => { E.deadT.textContent = 'Achan drags you back through the gate. You lose some scrap, and a night.'; modal('dead'); };
+  UI.dead = () => { E.deadT.textContent = 'Retry from the start of your current objective (lose 15% of your scrap), or let Achan drag you home (lose 40% and the night).'; modal('dead'); };
   function renderPause() { const s = G.set; E.pset.innerHTML = `<div class="at"><span>GRAPHICS</span><div>${G.QUAL.map((q, i) => `<button class="${s.q === i ? 'on' : ''}" data-q="${i}">${q.name}</button>`).join('')}</div></div><div class="at"><span>MOUSE</span><input type="range" min=".3" max="2.5" step=".05" value="${s.sens}" data-set="sens"></div><div class="at"><span>FOV</span><input type="range" min="60" max="100" step="1" value="${s.fov}" data-set="fov"></div><div class="at"><span>VOLUME</span><input type="range" min="0" max="1" step=".05" value="${s.vol}" data-set="vol"></div><div class="at"><span>FOLIAGE</span><input type="range" min="0" max="1.2" step=".05" value="${s.fol}" data-set="fol"></div><div class="at"><span>GORE</span><div><button class="${s.gore ? 'on' : ''}" data-gore="1">Full</button><button class="${!s.gore ? 'on' : ''}" data-gore="0">Reduced</button></div></div>`; }
   function drawBig() {
     const c = $('bigmap'), x = c.getContext('2d'), W = G.W, S = G.S, P = G.P, px = v => (v - W.X0) / 2, pz = v => (v - W.Z0) / 2; x.imageSmoothingEnabled = true; x.drawImage(G.mapCanvas, 0, 0, c.width, c.height);
@@ -94,13 +99,14 @@
     document.addEventListener('input', e => { const k = e.target.dataset.set; if (!k) return; G.set[k] = +e.target.value; G.saveSet(); if (k === 'vol') G.Audio.vol(G.set.vol); if (k === 'fol') G.Foliage.dirty(); });
     $('bRes').onclick = () => UI.pause(false); $('bSave').onclick = () => { G.save(); UI.msg('Game saved', 'dim'); };
     $('bQuit').onclick = () => { if (confirm('Erase your save and start again?')) { localStorage.removeItem('theeram.save'); location.reload(); } };
-    $('bWake').onclick = () => G.respawn(); $('bFree').onclick = () => { UI.close(); G.M.start(); };
+    $('bWake').onclick = () => G.respawn(true); $('bRetry').onclick = () => G.respawn(false); $('bFree').onclick = () => { UI.close(); G.M.start(); };
     $('game').addEventListener('click', () => { if (G.started && !G.paused && !G.In.locked) G.lock(); });
   };
   const DIRS = [['N', 0], ['NE', 45], ['E', 90], ['SE', 135], ['S', 180], ['SW', 225], ['W', 270], ['NW', 315]];
   UI.update = dt => {
     const P = G.P, S = G.S, W = G.Wp, st = W.st, In = G.In;
     if (G.hit('Tab')) { if (UI.open === 'panel') UI.close(); else if (!UI.open) { renderPanel(); modal('panel'); } }
+    if (G.hit('KeyI') && G.started && G.P.alive) { if (UI.open === 'bench') UI.close(); else if (!UI.open) UI.bench(true); }
     if (G.hit('KeyM')) { if (UI.open === 'mapov') UI.close(); else if (!UI.open) { drawBig(); modal('mapov'); } }
     if (G.hit('Escape')) { if (UI.open && UI.open !== 'dead' && UI.open !== 'end') UI.close(); else if (!UI.open) UI.pause(true); }
     if (G.hit('KeyP') && !UI.open) UI.pause(true);

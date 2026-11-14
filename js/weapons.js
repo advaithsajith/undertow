@@ -99,11 +99,12 @@
 
   const linC = new Map();
   function toWorld(g) { g.traverse(m => { if (!m.isMesh) return; let n = linC.get(m.material); if (!n) { n = m.material.clone(); if (n.color && !n.isMeshBasicMaterial) n.color.convertSRGBToLinear(); linC.set(m.material, n); } m.material = n; m.castShadow = true; }); if (g.userData.flash) g.userData.flash.visible = false; return g; }
-  Wp.worldGun = id => toWorld(buildGun(id, G.S.guns[id], true));
+  Wp.worldGun = id => toWorld(buildGun(id, G.S.guns[id] || { sight: 'iron', muzzle: 'none', mag: 'std', under: 'none', ammo: 'fmj', skin: 0, un: {}, skins: [0] }, true));
   Wp.worldMelee = id => toWorld(buildMelee(id, true));
   /* ---------- state ---------- */
   const st = Wp.st = { cur: 0, gun: null, meleeVM: null, leg: null, clip: {}, cool: 0, reloading: 0, reloadT: 0, equipT: 0, kick: 0, kickR: 0, bloom: 0, ads: 0, sway: new V3(), flashT: 0, swing: 0, swingDur: 0, swingHit: false, swingKind: '', quick: false, legT: 0, pumpT: 0, heavy: 0, throwSel: 'frag', hitT: 0, hitHead: false, zoom: 1, scoped: false };
   const vm = new THREE.Group(), proj = []; st.cstep = 0; st.comboT = 0; st.fovK = 0;
+  for (const id in DEFS) if (DEFS[id].cost) DEFS[id].cost = Math.round(DEFS[id].cost * .55 / 5) * 5;
   Wp.cfgOf = id => G.S.guns[id];
   Wp.curId = () => st.cur === 3 ? null : G.S.slots[st.cur];
   Wp.magSize = id => Math.round(DEFS[id].mag * (G.S.guns[id].mag === 'ext' ? 1.5 : 1));

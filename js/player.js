@@ -19,6 +19,7 @@
   P.teleport = (x, z, yaw) => { P.x = x; P.z = z; P.y = Math.max(G.groundAt(x, z), -1.25); P.vx = P.vz = P.vy = 0; if (yaw !== undefined) { P.yaw = yaw; P.byaw = yaw + Math.PI; } };
   P.hurt = (dmg, fx, fz, kind) => {
     if (!P.alive || G.S.god) return; if (P.veh) dmg *= P.veh.type === 'bike' ? .8 : .45; if (G.S.perk && G.S.perk.tough) dmg *= .85;
+    if (G.S.armor > 0) { const ab = Math.min(G.S.armor, dmg * .5); G.S.armor -= ab; dmg -= ab; if (G.S.armor <= 0) { G.S.armor = 0; G.UI && G.UI.msg('Your scrap armour falls apart', 'red'); } }
     P.hp -= dmg; P.hurtT = 0; P.regenT = 7; P.shake = Math.max(P.shake, .5); P.hitDir = Math.atan2(fx - P.x, fz - P.z);
     G.UI && G.UI.hurt(dmg, kind); G.Audio && G.Audio.hurt();
     if (P.hp <= 0) { P.hp = 0; P.alive = false; P.deadT = 0; P.grabber = null; if (P.veh) P.veh = null; G.Audio && G.Audio.death(); if (G.onDeath) G.onDeath(); }
@@ -112,7 +113,7 @@
     const hT = G.hAt(P.x, P.z); P.swim = hT < -1.25 && P.y < -1.2;
     const free = !P.grabber && P.busy <= 0;
     if (G.hit('KeyC') || G.hit('ControlLeft')) P.crouch = !P.crouch;
-    P.sprinting = free && k.ShiftLeft && f > 0 && P.stam > 1 && !P.crouch && W.ads < .3 && !P.swim && W.swing <= 0;
+    P.sprinting = free && k.ShiftLeft && f > 0 && P.stam > 1 && !P.crouch && W.ads < .3 && !P.swim && W.swing <= 0 && !G.In.mb[0];
     let top = P.swim ? 2.3 : P.crouch ? 2.0 : P.sprinting ? 6.9 : 4.3; if (W.ads > .5) top *= .55; if (hT < -.35 && !P.swim) top *= .62; if (!free) top = 0; if (W.swing > 0) top *= W.quick && W.swingKind === 'light' ? .7 : .15;
     const ac = P.onGround ? 11 : 2.5; P.vx += (wx * top - P.vx) * Math.min(1, dt * ac); P.vz += (wz * top - P.vz) * Math.min(1, dt * ac);
     P.dodgeCd -= dt; P.dodgeT -= dt;
