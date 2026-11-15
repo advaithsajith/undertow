@@ -135,9 +135,11 @@
     st.clip[id]--; st.cool = 60 / D.rpm; if (D.pump || D.bolt) st.pumpT = Math.min(.55, 60 / D.rpm * .8);
     cam.getWorldDirection(fw); rt.crossVectors(fw, cam.up).normalize(); up.crossVectors(rt, fw);
     o.copy(cam.position); mzp.copy(o).addScaledVector(fw, .7).addScaledVector(rt, .13 * (1 - st.ads)).addScaledVector(up, -.1 * (1 - st.ads) - .02);
-    P.aimT = .7; const tp = P.tps && !st.scoped; if (tp) { o.addScaledVector(fw, P.camBack); mzp.copy(P.muzzle); }
+    P.aimT = .7; const tp = P.tps && !st.scoped && !P.veh; if (tp) { o.addScaledVector(fw, P.camBack); mzp.copy(P.muzzle); }
+    if (P.veh) { const V = P.veh, t0 = V.T.cam + 2, sx = o.x + fw.x * t0, sy = o.y + fw.y * t0, sz = o.z + fw.z * t0; let tt = 120; const wh0 = G.ray(sx, sy, sz, fw.x, fw.y, fw.z, tt); if (wh0) tt = wh0.t; const zh0 = G.Z.raycast(sx, sy, sz, fw.x, fw.y, fw.z, tt); if (zh0) tt = zh0.t;
+      const tx = sx + fw.x * tt, ty = sy + fw.y * tt, tz = sz + fw.z * tt; o.set(V.x + Math.cos(V.yaw) * .35, V.y + 1.75, V.z - Math.sin(V.yaw) * .35); fw.set(tx - o.x, ty - o.y, tz - o.z).normalize(); o.addScaledVector(fw, V.T.r + .4); rt.crossVectors(fw, cam.up).normalize(); up.crossVectors(rt, fw); mzp.copy(o); }
     let spread = lerp(D.hip, D.ads, st.ads) * (c.under === 'laser' ? lerp(.55, 1, st.ads) : c.under === 'grip' ? lerp(.75, 1, st.ads) : 1) * (c.sight !== 'iron' ? lerp(1, .8, st.ads) : 1);
-    spread *= (P.speed > 2 ? 1.5 : 1) * (P.crouch ? .75 : 1) * (P.onGround ? 1 : 2); spread += st.bloom; const pel = D.pellets || 1;
+    spread *= P.veh ? 1.25 + Math.min(1, Math.abs(P.veh.sp) / 25) : (P.speed > 2 ? 1.5 : 1) * (P.crouch ? .75 : 1) * (P.onGround ? 1 : 2); spread += st.bloom; const pel = D.pellets || 1;
     let dmg = D.dmg * (supp ? .93 : 1) * (c.ammo === 'hollow' ? 1.22 : 1), pen = c.ammo === 'hollow' ? 0 : (D.pen || 0), anyHit = false, head = false, killed = 0;
     for (let i = 0; i < pel; i++) {
       const a = Math.random() * TAU, r = Math.sqrt(Math.random()) * spread * Math.PI / 180;
@@ -182,7 +184,7 @@
     const P = G.P, M = MELEE[G.S.melee], k = st.swingKind, fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw); let n = 0;
     if (k === 'execute' || k === 'stomp') { const t = st.ctxT; if (t && t.state !== 'dead') { const y = k === 'stomp' ? t.y + .3 : t.y + 1.5; const hx = k === 'stomp' ? t.x + Math.sin(t.yaw) * -1.5 * t.fall : t.x, hz = k === 'stomp' ? t.z + Math.cos(t.yaw) * -1.5 * t.fall : t.z; G.FX.gore(hx, y, hz, 30); G.Z.damage(t, 'head', 9999, fx, 0, fz, { sever: 5, heavy: true, how: st.silent ? 'silent' : k }); G.UI && G.UI.splat(.8); G.Audio && G.Audio.gore(1.2); P.shake = .5; n = 1; } }
     else {
-      const stab = k === 'light' && st.cstep === 2, reach = k === 'kick' ? 2.6 : M.reach + (stab ? .5 : 0), arc = k === 'kick' ? 1.1 : stab ? Math.min(M.arc, .42) : M.arc;
+      const stab = k === 'light' && st.cstep === 2, reach = (k === 'kick' ? 2.6 : M.reach + (stab ? .5 : 0)) + (P.veh ? P.veh.T.r + .6 : 0), arc = k === 'kick' ? 1.1 : stab ? Math.min(M.arc, .42) : M.arc;
       for (const z of G.Z.list) {
         if (z.state === 'dead') continue; const dx = z.x - P.x, dz = z.z - P.z, dd = Math.hypot(dx, dz); if (dd > reach + z.r || Math.abs(z.y - P.y) > 2) continue; if (dd > .6 && Math.abs(angDiff(Math.atan2(dx, dz), P.yaw + Math.PI)) > arc) continue;
         const nx = dx / (dd || 1), nz = dz / (dd || 1), hy = z.y + (z.crawl || z.state === 'down' ? .3 : 1.25) * z.rig.scale;
@@ -198,31 +200,33 @@
   Wp.context = () => { const t = G.Z.meleeTarget(); if (!t || st.swing > 0) return false; st.ctxT = t.z; const P = G.P; P.yaw = Math.atan2(t.z.x - P.x, t.z.z - P.z) + Math.PI; P.dodgeT = .5; st.silent = t.kind === 'silent'; swingStart(st.silent ? 'execute' : t.kind, true); return true; };
   Wp.throwIt = () => {
     const S = G.S, k = st.throwSel; if (!(S[k] > 0) || st.cool > 0) return; S[k]--; st.cool = .7; const P = G.P, cam = G.camera; cam.getWorldDirection(fw);
-    const m = new THREE.Mesh(k === 'frag' ? new THREE.IcosahedronGeometry(.07, 1) : new THREE.CylinderGeometry(.04, .05, .2, 8), new THREE.MeshStandardMaterial({ color: k === 'frag' ? 0x2a3a22 : 0x6a4a20, roughness: .5 })); m.castShadow = true; m.position.copy(cam.position).addScaledVector(fw, .5); G.scene.add(m);
+    const m = new THREE.Mesh(k === 'frag' ? new THREE.IcosahedronGeometry(.07, 1) : new THREE.CylinderGeometry(.04, .05, .2, 8), new THREE.MeshStandardMaterial({ color: k === 'frag' ? 0x2a3a22 : 0x6a4a20, roughness: .5 })); m.castShadow = true; m.position.copy(cam.position).addScaledVector(fw, .5); if (P.veh) { const V = P.veh; m.position.set(V.x, V.y + 1.9, V.z).addScaledVector(fw, V.T.r + .5); } G.scene.add(m);
     proj.push({ m, k, v: new V3(fw.x * 15 + P.vx * .5, fw.y * 15 + 4.5, fw.z * 15 + P.vz * .5), t: k === 'frag' ? 2.3 : 9 }); G.Audio && G.Audio.swing(); st.kick = .8;
   };
   function boom(p) {
     const x = p.m.position.x, y = p.m.position.y, z = p.m.position.z, P = G.P; G.scene.remove(p.m);
     if (p.k === 'bottle') { G.noise(x, z, 50); G.FX.sparks(x, y + .1, z, 0, 1, 0, 7); G.Audio && G.Audio.click(1.7); return; }
     if (p.k === 'frag') { G.FX.explode(x, y, z, true); G.Z.blast(x, y, z, 7, 280); const dd = Math.hypot(P.x - x, P.z - z); if (dd < 6.5) P.hurt(70 * (1 - dd / 6.5), x, z, 'blast'); G.noise(x, z, 90); G.Audio && G.Audio.boom(dd); P.shake = Math.max(P.shake, clamp(1.4 - dd / 20, 0, 1)); G.FX.decal(x, z, 0); }
-    else { G.FX.fire(x, z, 3.4, 10); G.FX.explode(x, y, z, false); for (const zb of G.Z.list) if (zb.state !== 'dead' && dist2(zb.x, zb.z, x, z) < 14) zb.burn = 7; G.noise(x, z, 40); G.Audio && G.Audio.boom(30); }
+    else { G.FX.fire(x, z, 4.6, 14); G.FX.fire(x + rnd(-2, 2), z + rnd(-2, 2), 2.6, 11); G.FX.explode(x, y, z, false); for (let i = 0; i < 14; i++) G.FX.flame(x + rnd(-3, 3), y + rnd(0, 1.2), z + rnd(-3, 3), 1.4); for (const zb of G.Z.list) if (zb.state !== 'dead' && dist2(zb.x, zb.z, x, z) < 25) { zb.burn = 9; zb.aggro = 0; } G.addLight(x, y + 1, z, 0xff7020, 30, 60, 40); G.noise(x, z, 40); G.Audio && G.Audio.boom(Math.hypot(P.x - x, P.z - z)); G.Audio && G.Audio.gore && G.Audio.gore(.4); }
   }
 
   /* ---------- per-frame ---------- */
   Wp.update = dt => {
-    const P = G.P, In = G.In, id = Wp.curId(), D = id && DEFS[id], gun = st.gun, canAct = P.alive && !P.veh && !P.grabber && !G.paused && !P.busy;
+    const P = G.P, In = G.In, id = Wp.curId(), D = id && DEFS[id], gun = st.gun, canAct = P.alive && !P.grabber && !G.paused && !P.busy, inV = !!P.veh, bikeV = inV && P.veh.T.lean;
     st.comboT -= dt; st.cool -= dt; st.equipT = Math.max(0, st.equipT - dt); st.kick = Math.max(0, st.kick - dt * 7); st.kickR *= Math.max(0, 1 - dt * 9); st.bloom = Math.max(0, st.bloom - dt * 3.2); st.hitT -= dt; st.pumpT = Math.max(0, st.pumpT - dt);
     if (st.flashT > 0) { st.flashT -= dt; if (st.flashT <= 0) G.vmFlash.intensity = 0; }
-    for (let i = proj.length - 1; i >= 0; i--) { const p = proj[i]; p.t -= dt; p.v.y -= 16 * dt; const m = p.m; m.position.addScaledVector(p.v, dt); m.rotation.x += dt * 9; m.rotation.z += dt * 6; const gy = G.groundAt(m.position.x, m.position.z) + .07; let hit = m.position.y < gy; if (hit) { m.position.y = gy; p.v.y *= -.35; p.v.x *= .55; p.v.z *= .55; } else if (G.blocked(m.position.x, m.position.z, .1) && m.position.y < gy + 3) { p.v.x *= -.4; p.v.z *= -.4; hit = true; } if (p.t <= 0 || (hit && p.k !== 'frag')) { boom(p); proj.splice(i, 1); } }
+    for (let i = proj.length - 1; i >= 0; i--) { const p = proj[i]; p.t -= dt; p.v.y -= 16 * dt; const m = p.m; m.position.addScaledVector(p.v, dt); m.rotation.x += dt * 9; m.rotation.z += dt * 6; if (p.k === 'molotov') { G.FX.flame(m.position.x, m.position.y + .1, m.position.z, .5); if ((G.frame & 3) === 0) G.addLight(m.position.x, m.position.y, m.position.z, 0xff8030, 4, 12, 6); } const gy = G.groundAt(m.position.x, m.position.z) + .07; let hit = m.position.y < gy; if (hit) { m.position.y = gy; p.v.y *= -.35; p.v.x *= .55; p.v.z *= .55; } else if (G.blocked(m.position.x, m.position.z, .1) && m.position.y < gy + 3) { p.v.x *= -.4; p.v.z *= -.4; hit = true; } if (!hit && p.k === 'molotov') for (const zb of G.Z.list) if (zb.state !== 'dead' && Math.abs(m.position.y - zb.y - 1) < 1.1 && dist2(zb.x, zb.z, m.position.x, m.position.z) < .5) { hit = true; break; }
+      if (p.t <= 0 || (hit && p.k !== 'frag')) { boom(p); proj.splice(i, 1); } }
     if (canAct) {
       for (let i = 0; i < 3; i++) if (G.hit('Digit' + (i + 1))) Wp.equip(i); if (G.hit('Digit4')) Wp.equip(3);
       if (In.wheel) { let s = st.cur; for (let i = 0; i < 4; i++) { s = (s + (In.wheel > 0 ? 1 : 3)) % 4; if (s === 3 || G.S.slots[s]) break; } Wp.equip(s); }
       if (G.hit('Digit5')) { const TS = ['frag', 'molotov', 'bottle']; st.throwSel = TS[(TS.indexOf(st.throwSel) + 1) % 3]; G.UI && G.UI.msg({ frag: 'Grenade', molotov: 'Petrol bomb', bottle: 'Bottle (noise lure)' }[st.throwSel] + ' selected'); }
       if (G.hit('KeyG')) Wp.throwIt();
-      if (G.hit('KeyF')) Wp.context();
-      if (G.hit('KeyV') && st.swing <= 0) swingStart('light', st.cur !== 3);
+      if (G.hit('KeyF') && !inV) Wp.context();
+      if (G.hit('KeyV') && st.swing <= 0 && (!inV || bikeV || P.veh.type === 'auto')) swingStart('light', st.cur !== 3);
       if (st.swing <= 0 && st.equipT <= 0) {
-        if (st.cur === 3) { if (In.mb[2]) st.heavy += dt; if (In.mp[0]) swingStart('light', false); else if (!In.mb[2] && st.heavy > 0) { if (st.heavy > .25 && P.stam > 10) swingStart('heavy', false); st.heavy = 0; } }
+        if (st.cur === 3 && inV && !bikeV && P.veh.type !== 'auto') { }
+        else if (st.cur === 3) { if (In.mb[2]) st.heavy += dt; if (In.mp[0]) swingStart('light', false); else if (!In.mb[2] && st.heavy > 0) { if (st.heavy > .25 && P.stam > 10) swingStart('heavy', false); st.heavy = 0; } }
         else if (D) {
           if (G.hit('KeyR')) reloadStart(id);
           const want = D.auto ? In.mb[0] : In.mp[0];

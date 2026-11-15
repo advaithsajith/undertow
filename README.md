@@ -101,6 +101,10 @@ Press **E** next to a vehicle to drive it. You get the family autorickshaw after
 jeeps, vans and lorries are parked around the district. Fishing boats work on water only. Once you've met Rajan,
 call his boat at the jetties to sail along the coast.
 
+You can fight from the driver's seat: the crosshair stays up, **LMB** fires your current gun at whatever it's
+on, and **G** throws grenades and molotovs. On a motorcycle or the auto you can also swing your melee weapon
+(**4** then click, or **V**) at anything you pass. You can't climb in while something is grabbing you.
+
 ### 6. The siege
 From the third mission on, the infected come for the house at **20:30** every night. Before dark, repair both
 **gates** (hold **E** at a gate), stock up, and put your guards on watch. Fight from the courtyard until the
@@ -112,6 +116,11 @@ scrap.
   search where they last saw you. Walk up behind an unaware one and press **F** for a **silent kill**.
 - **Cover:** walls stop bullets both ways. Crouch behind a low laterite compound wall and raiders' shots hit the
   stone.
+- **Slide:** press **C** while sprinting to drop into a slide. It's fast, keeps you low, lets you shoot, and
+  knocks down any infected you slide into. **C** while not sprinting toggles crouch.
+- **Molotovs:** a petrol bomb smashes on the ground or on a body and leaves a wide pool of fire for about
+  14 seconds. Burning infected set their neighbours alight, so throw into the middle of a crowd. Don't
+  stand in it yourself. You start with two, and field crafting (**I**) makes two more for 18 scrap.
 - **Hazards:** red gas cylinders and fuel drums explode when shot, and set each other off. Pull a crowd onto
   them.
 - **Lures:** throw a **bottle** (cycle throwables with **5**, throw with **G**) to pull enemies away, or drop a

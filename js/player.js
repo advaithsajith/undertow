@@ -4,7 +4,7 @@
 (function () {
   G.hit = c => G.In.p[c];
   const V3 = THREE.Vector3;
-  const P = G.P = { x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, ix: 0, iz: 0, yaw: 0, pitch: 0, recBack: 0, hp: 100, maxHp: 100, stam: 100, stamT: 0, alive: true, crouch: false, sprinting: false, onGround: true, speed: 0, speedN: 0, bob: 0, eye: 1.68, shake: 0, dodgeT: 0, dodgeCd: 0, dvx: 0, dvz: 0, loud: 0, lightOn: false, safe: false, grabber: null, grabN: 0, busy: 0, busyFn: null, hurtT: 9, regenT: 0, veh: null, kickPitch: 0, roll: 0, swim: false, deadT: 0, holdT: 0, holdI: null, near: null,
+  const P = G.P = { x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, ix: 0, iz: 0, yaw: 0, pitch: 0, recBack: 0, hp: 100, maxHp: 100, stam: 100, stamT: 0, alive: true, crouch: false, sprinting: false, onGround: true, speed: 0, speedN: 0, bob: 0, eye: 1.68, slideT: 0, sdx: 0, sdz: 0, sHit: [], shake: 0, dodgeT: 0, dodgeCd: 0, dvx: 0, dvz: 0, loud: 0, lightOn: false, safe: false, grabber: null, grabN: 0, busy: 0, busyFn: null, hurtT: 9, regenT: 0, veh: null, kickPitch: 0, roll: 0, swim: false, deadT: 0, holdT: 0, holdI: null, near: null,
     tps: true, rig: null, byaw: 0, ph: 0, aimT: 0, camBack: 0, muzzle: new V3(), held: null, heldId: null, mvDir: 1 };
   const VT = G.VT = {
     auto: { name: 'Autorickshaw', label: 'Drive autorickshaw', top: 15.5, acc: 9, turn: .22, r: 1.15, mass: 1, seat: [0, .62, .25], cam: 6.2, exit: 1.6 },
@@ -73,7 +73,7 @@
     }
     G.scene.add(g);
     const v = { type, T: VT[type], x: 0, z: 0, y: 0, yaw: 0, sp: 0, roll: 0, mesh: g, wheels, lamp, nz: 0 };
-    v.inter = { label: () => type === 'auto' && !G.S.autoOk ? 'Achan has the keys' : v.T.label, fn: () => { if (type === 'auto' && !G.S.autoOk) { G.UI.msg('Achan keeps the auto keys — earn them first', 'dim'); return; } P.veh = v; P.crouch = false; G.vehLight.position.set(0, 1, 1.5); G.vehLight.target.position.set(0, .2, 9); v.mesh.add(G.vehLight, G.vehLight.target); G.Audio && G.Audio.click(.6); G.UI && G.UI.msg('W/S drive · A/D steer · Space brake · E get off'); } };
+    v.inter = { label: () => type === 'auto' && !G.S.autoOk ? 'Achan has the keys' : v.T.label, fn: () => { if (P.grabber) return; if (type === 'auto' && !G.S.autoOk) { G.UI.msg('Achan keeps the auto keys — earn them first', 'dim'); return; } P.veh = v; P.crouch = false; G.vehLight.position.set(0, 1, 1.5); G.vehLight.target.position.set(0, .2, 9); v.mesh.add(G.vehLight, G.vehLight.target); G.Audio && G.Audio.click(.6); G.UI && G.UI.msg('W/S drive · A/D steer · Space brake · E get off'); } };
     G.Vehs.push(v); return v;
   }
   const place = (v, x, z, yaw) => { v.x = x; v.z = z; v.yaw = yaw; v.sp = 0; v.y = v.T.water ? -.12 : G.groundAt(x, z); };
@@ -112,13 +112,16 @@
     const sy = Math.sin(P.yaw), cy = Math.cos(P.yaw); let wx = -sy * f + cy * s, wz = -cy * f - sy * s; const l = Math.hypot(wx, wz); if (l > 1) { wx /= l; wz /= l; }
     const hT = G.hAt(P.x, P.z); P.swim = hT < -1.25 && P.y < -1.2;
     const free = !P.grabber && P.busy <= 0;
-    if (G.hit('KeyC') || G.hit('ControlLeft')) P.crouch = !P.crouch;
-    P.sprinting = free && k.ShiftLeft && f > 0 && P.stam > 1 && !P.crouch && W.ads < .3 && !P.swim && W.swing <= 0 && !G.In.mb[0];
+    if (G.hit('KeyC') || G.hit('ControlLeft')) { if (free && P.sprinting && P.onGround && P.stam > 12 && P.speed > 5 && !P.swim) { const d0 = Math.hypot(P.vx, P.vz) || 1; P.slideT = .85; P.sdx = P.vx / d0 * 10; P.sdz = P.vz / d0 * 10; P.crouch = true; P.stam -= 12; P.stamT = .8; P.sHit = []; G.Audio && G.Audio.swing(); G.FX.dust(P.x, P.y + .05, P.z, 6); } else P.crouch = !P.crouch; }
+    P.sprinting = free && k.ShiftLeft && f > 0 && P.stam > 1 && !P.crouch && W.ads < .3 && !P.swim && W.swing <= 0 && !G.In.mb[0] && !(P.slideT > 0);
     let top = P.swim ? 2.3 : P.crouch ? 2.0 : P.sprinting ? 6.9 : 4.3; if (W.ads > .5) top *= .55; if (hT < -.35 && !P.swim) top *= .62; if (!free) top = 0; if (W.swing > 0) top *= W.quick && W.swingKind === 'light' ? .7 : .15;
     const ac = P.onGround ? 11 : 2.5; P.vx += (wx * top - P.vx) * Math.min(1, dt * ac); P.vz += (wz * top - P.vz) * Math.min(1, dt * ac);
     P.dodgeCd -= dt; P.dodgeT -= dt;
     if (free && G.hit('KeyQ') && P.dodgeCd <= 0 && P.stam >= 20 && P.onGround) { let dx = wx, dz = wz; if (l < .1) { dx = sy; dz = cy; } P.dvx = dx * 10.5; P.dvz = dz * 10.5; P.dodgeT = .34; P.dodgeCd = .75; P.stam -= 22; P.stamT = .9; P.crouch = false; G.Audio && G.Audio.swing(); }
     let mx = P.vx, mz = P.vz; if (P.dodgeT > 0) { mx = P.dvx; mz = P.dvz; }
+    if (P.slideT > 0) { P.slideT -= dt; const kS = .3 + .7 * Math.max(0, P.slideT / .85); mx = P.sdx * kS; mz = P.sdz * kS; P.vx = mx; P.vz = mz; if (Math.random() < .5) G.FX.dust(P.x - P.sdx * .05, P.y + .05, P.z - P.sdz * .05, 1);
+      if (!P.onGround || G.blocked(P.x + P.sdx * .06, P.z + P.sdz * .06, .3)) P.slideT = 0;
+      for (const z of G.Z.list) { if (z.state === 'dead' || P.sHit.includes(z)) continue; const dx = z.x - P.x, dz = z.z - P.z, d = Math.hypot(dx, dz); if (d < 1.25 && dx * P.sdx + dz * P.sdz > 0) { P.sHit.push(z); G.FX.blood(z.x, z.y + .5, z.z, P.sdx * .1, .4, P.sdz * .1, 6); if (!G.Z.damage(z, Math.random() < .5 ? 'legL' : 'legR', 24, P.sdx / 10, 0, P.sdz / 10, { how: 'kick', heavy: true })) G.Z.knock(z, P.sdx / 10, P.sdz / 10, 6); P.shake = Math.max(P.shake, .3); G.Audio && G.Audio.thud(true); G.UI && G.UI.style && G.UI.style('SLIDE TACKLE', 0); } } }
     mx += P.ix; mz += P.iz; const dk = Math.max(0, 1 - dt * 6); P.ix *= dk; P.iz *= dk;
     if (free && G.hit('Space') && P.onGround && !P.swim && P.stam > 6) { P.vy = 5.3; P.onGround = false; P.stam -= 6; P.stamT = .6; P.crouch = false; }
     P.x += mx * dt; P.z += mz * dt; G.resolve(P, .38, P.y, 'gate');
@@ -138,6 +141,7 @@
     P.stamT -= dt; if (P.sprinting) { P.stam -= 13 * dt; P.stamT = .8; } else if (P.stamT <= 0) P.stam = Math.min(100, P.stam + (P.speed < .5 ? 26 : 16) * dt);
     P.regenT -= dt; if (P.regenT <= 0 && P.hp < 40) P.hp = Math.min(40, P.hp + 3 * dt);
     if (P.grabber) { P.hurtT = Math.min(P.hurtT, .3); P.hp -= 5 * dt; P.shake = Math.max(P.shake, .35); const z = P.grabber; P.yaw += angDiff(Math.atan2(z.x - P.x, z.z - P.z) + Math.PI, P.yaw) * Math.min(1, dt * 8); if (G.hit('KeyF') || G.hit('KeyE') || In.mp[0]) { P.grabN++; P.shake = .6; if (P.grabN >= 5) { const dx = z.x - P.x, dz = z.z - P.z, d = Math.hypot(dx, dz) || 1; P.grabber = null; G.Z.knock(z, dx / d, dz / d, 5); G.FX.blood(z.x, z.y + 1.4, z.z, dx / d, .3, dz / d, 5); G.Audio && G.Audio.thud(true); P.dodgeT = .6; } } if (P.hp <= 0 && P.alive) P.hurt(1, z.x, z.z, 'bite'); }
+    { let inF = false; for (const f of G.FX.fires) if (dist2(P.x, P.z, f.x, f.z) < f.r * f.r * .7 && P.y < f.y + 1) { inF = true; break; } if (inF) { P.fireT = (P.fireT || 0) + dt; if (P.fireT > .35) { P.fireT = 0; P.hurt(5, P.x + .1, P.z, 'fire'); G.UI && G.UI.msg('You are standing in fire!', 'red'); } } }
     if (free && G.hit('KeyH') && G.S.meds > 0 && P.hp < P.maxHp - 1) { P.busy = 1.3; P.busyLabel = 'Bandaging…'; P.busyMax = 1.3; P.busyFn = () => { G.S.meds--; P.heal(55 * (G.S.perk && G.S.perk.medic ? 1.4 : 1)); G.UI && G.UI.msg('Used first-aid kit', 'green'); }; G.Audio && G.Audio.click(.4); }
     if (P.busy > 0) { P.busy -= dt; if (P.busy <= 0 && P.busyFn) { const fn = P.busyFn; P.busyFn = null; fn(); } }
     if (G.hit('KeyT')) { P.lightOn = !P.lightOn; G.Audio && G.Audio.click(.8); }
@@ -191,6 +195,9 @@
   }
   const f3 = new V3(), rt = new V3(), piv = new V3(), tmp = new V3(), e3 = new V3();
   P.update = dt => {
+    if (P.grabber && (P.veh || !P.alive || P.grabber.state !== 'grab' || G.Z.list.indexOf(P.grabber) < 0)) P.grabber = null;
+    if (P.veh && P.busy > 0) { P.busy = 0; P.busyFn = null; }
+    { const W0 = G.Wp.st; for (const k of ['swing', 'swingDur', 'equipT', 'cool', 'reloadT', 'legT']) if (W0[k] !== W0[k]) W0[k] = 0; }
     const In = G.In, cam = G.camera, W = G.Wp.st, sens = .0021 * G.set.sens * (cam.fov / G.set.fov);
     if (P.alive) {
       P.yaw -= In.mx * sens; P.pitch -= In.my * sens; const ak = In.k; P.yaw += ((ak.ArrowLeft ? 1 : 0) - (ak.ArrowRight ? 1 : 0)) * dt * 2; P.pitch += ((ak.ArrowUp ? 1 : 0) - (ak.ArrowDown ? 1 : 0)) * dt * 1.4;
@@ -199,12 +206,12 @@
     } else { P.deadT += dt; P.vy = 0; }
     P.hurtT += dt; P.shake = Math.max(0, P.shake - dt * 2.2);
     const sh = P.shake * P.shake, k = G.In.k, V = P.veh, fpv = !P.tps || W.scoped;
-    const eyeT = !P.alive ? .35 : P.swim ? 1.62 : P.crouch ? 1.05 : 1.68; P.eye += (eyeT - P.eye) * Math.min(1, dt * 9);
+    const eyeT = !P.alive ? .35 : P.slideT > 0 ? .78 : P.swim ? 1.62 : P.crouch ? 1.05 : 1.68; P.eye += (eyeT - P.eye) * Math.min(1, dt * 9);
     const cp = Math.cos(P.pitch), sp = Math.sin(P.pitch); f3.set(-Math.sin(P.yaw) * cp, sp, -Math.cos(P.yaw) * cp); rt.set(Math.cos(P.yaw), 0, -Math.sin(P.yaw));
     if (V) {
       const pc = Math.cos(P.pitch * .6 - .22), d = V.T.cam; cam.position.set(V.x + Math.sin(P.yaw) * d * pc, V.y + 2.3 - Math.sin(P.pitch * .6 - .22) * d, V.z + Math.cos(P.yaw) * d * pc); const gy = G.groundAt(cam.position.x, cam.position.z) + .4; if (cam.position.y < gy) cam.position.y = gy; cam.rotation.set(P.pitch * .6 - .22 + rnd(-1, 1) * sh * .02, P.yaw, 0, 'YXZ');
     } else if (fpv && P.alive) {
-      const bobY = Math.abs(Math.cos(P.bob)) * .035 * P.speedN + (P.swim ? Math.sin(G.t * 2) * .05 : 0), sIn = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0); P.roll += (-sIn * .012 * P.speedN - P.roll) * Math.min(1, dt * 6);
+      const bobY = Math.abs(Math.cos(P.bob)) * .035 * P.speedN + (P.swim ? Math.sin(G.t * 2) * .05 : 0), sIn = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0); P.roll += (-sIn * .012 * P.speedN + (P.slideT > 0 ? .07 : 0) - P.roll) * Math.min(1, dt * 6);
       cam.position.set(P.x + rnd(-1, 1) * sh * .03, P.y + P.eye + bobY + rnd(-1, 1) * sh * .03, P.z); cam.rotation.set(P.pitch + P.kickPitch + Math.sin(G.t * 1.3) * .004 + Math.sin(G.t * 2.9) * .003 * (1 + P.speedN * 3) + rnd(-1, 1) * sh * .025, P.yaw + Math.sin(G.t * 1.1 + 2) * .003 + rnd(-1, 1) * sh * .02, P.roll + (P.rollK || 0) + Math.sin(P.bob) * .006 * P.speedN + rnd(-1, 1) * sh * .02, 'YXZ'); P.camBack = 0; P.rollK = (P.rollK || 0) * Math.max(0, 1 - dt * 9);
     } else {
       // over the shoulder
@@ -216,7 +223,7 @@
     }
     // character
     const r = P.rig; r.root.visible = !(fpv && !V) || !P.alive;
-    if (V) { const T = V.T, c = Math.cos(V.yaw), s = Math.sin(V.yaw); r.root.position.set(V.x + T.seat[0] * c + T.seat[2] * s, V.y + T.seat[1] - .55, V.z - T.seat[0] * s + T.seat[2] * c); r.root.rotation.set(0, V.yaw, V.roll, 'YXZ'); P.byaw = V.yaw; if (P.held) P.held.visible = false; }
+    if (V) { const T = V.T, c = Math.cos(V.yaw), s = Math.sin(V.yaw); r.root.position.set(V.x + T.seat[0] * c + T.seat[2] * s, V.y + T.seat[1] - .55, V.z - T.seat[0] * s + T.seat[2] * c); r.root.rotation.set(0, V.yaw, V.roll, 'YXZ'); P.byaw = V.yaw; if (P.held) P.held.visible = P.aimT > 0; }
     else { r.root.position.set(P.x, P.y, P.z); r.root.rotation.set(0, P.byaw, 0); if (P.held) P.held.visible = P.alive; }
     P.syncHeld(); pose(dt);
     G.Rig.pt(r, 'handR', P.muzzle); P.muzzle.x += Math.sin(P.byaw) * .35; P.muzzle.z += Math.cos(P.byaw) * .35; P.muzzle.y += .06 + Math.sin(P.pitch) * .3;

@@ -27,7 +27,7 @@
     lights: { name: 'Floodlights', max: 1, cost: 80, txt: 'Guards shoot better at night' }, spikes: { name: 'Spike rows', max: 3, cost: 60, txt: 'Hurts anything clawing at a gate' }, garden: { name: 'Kitchen garden', max: 3, cost: 50, txt: '+2 food every morning per level' }
   };
   G.newState = () => ({
-    v: 3, files: [], scrap: 40, food: 8, meds: 1, frag: 1, molotov: 1, fuel: 0, ammo: { p: 60, s: 0, r: 0, h: 0, b: 0, f: 0 }, bottle: 2, mine: 0, guns: {}, slots: ['pistol', null, null], melee: 'machete', meleeOwned: ['machete'],
+    v: 3, files: [], scrap: 40, food: 8, meds: 1, frag: 1, molotov: 2, fuel: 0, ammo: { p: 60, s: 0, r: 0, h: 0, b: 0, f: 0 }, bottle: 2, mine: 0, guns: {}, slots: ['pistol', null, null], melee: 'machete', meleeOwned: ['machete'],
     mission: 0, step: 0, mv: {}, flags: {}, lightOn: false, autoOk: false, boat: false, fort: false, noSpawn: false, god: false,
     fam: { achan: { hp: 100, bond: 1, role: 'guard', talk: 0 }, amma: { hp: 100, bond: 1, role: 'cook', talk: 0 }, muthassi: { hp: 100, bond: 1, role: 'rest', talk: 0 }, meenu: { hp: 100, bond: 1, role: 'rest', talk: 0 } },
     dead: [], gate: { N: 300, E: 300 }, up: { walls: 0, tower: 0, lights: 0, spikes: 0, garden: 0 }, morale: 70, perk: {}, looted: {}, stats: { kills: 0, heads: 0, shots: 0, deaths: 0 }, siegeDay: 0, armor: 0, cp: null, job: null, hour: 16.9, day: 1

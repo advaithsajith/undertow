@@ -91,6 +91,7 @@
     if (part[0] === 'l' && !z.crawl) { z.crawl = true; z.sp = .75; if (z.state !== 'down') { z.fall = -1; setS(z, 'down', .9); } }
   }
   function kill(z, dx, dz, o) {
+    if (G.P.grabber === z) G.P.grabber = null;
     const fx = Math.sin(z.yaw), fz = Math.cos(z.yaw); if (z.state !== 'down' && !z.crawl) z.fall = (dx * fx + dz * fz) < .2 ? 1 : -1; if (z.crawl) z.fall = -1;
     const launch = (o.knock || 0) > 2.8 || o.how === 'kick' || o.how === 'road' || o.how === 'blast', kn = o.knock || (o.how === 'kick' ? 7 : o.how === 'blast' ? 5 : 1.6);
     setS(z, 'dead'); z.hp = 0; z.deadT = 0; z.kx = dx * kn; z.kz = dz * kn; if (launch && !z.crawl) { z.vy = rnd(3.2, 5.5); z.oy = .02; }
@@ -269,7 +270,7 @@
       // stuck → sidestep
       if (canMove && speed > .3) { z.stuck += e; if (z.stuck > .7) { const m = Math.hypot(z.x - z.lx, z.z - z.lz); if (m < speed * .7 * .3) { z.stk = (z.stk || 0) + 1; z.side = Math.random() < .5 ? 1 : -1; z.sideT = rnd(.9, 1.8); } else z.stk = 0; z.stuck = 0; z.lx = z.x; z.lz = z.z; } }
       // fire / bleed
-      if (z.burn > 0) { z.burn -= e; G.FX.flame(z.x, z.y + rnd(.3, 1.5), z.z, .8); if ((Z.tick + z.id) % 12 === 0) { G.addLight(z.x, z.y + 1, z.z, 0xff7020, 6, 20, 12); if (Z.damage(z, 'torso', 9, 0, 0, 0, {})) continue; } }
+      if (z.burn > 0) { z.burn -= e; G.FX.flame(z.x, z.y + rnd(.3, 1.5), z.z, .8); if ((Z.tick + z.id) % 20 === 0) for (const o2 of L) if (o2 !== z && o2.state !== 'dead' && !o2.human && o2.burn <= 0 && dist2(o2.x, o2.z, z.x, z.z) < 1.6 && Math.random() < .35) o2.burn = 6; if ((Z.tick + z.id) % 12 === 0) { G.addLight(z.x, z.y + 1, z.z, 0xff7020, 6, 20, 12); if (Z.damage(z, 'torso', 9, 0, 0, 0, {})) continue; } }
       else if ((Z.tick + z.id) % 10 === 0) for (const f of G.FX.fires) if (dist2(z.x, z.z, f.x, f.z) < f.r * f.r) z.burn = 5;
       if (z.bleed > 0) { z.bleed -= e; if (Math.random() < .5) { const g = z.rig.stumps[z.bleedPart]; g.getWorldPosition(a); G.FX.emit(a.x, a.y, a.z, rnd(-.6, .6), rnd(.5, 2.2), rnd(-.6, .6), .4, .012, .01, 1, .045, 1.4, { kind: 1 }); } }
       if (z.type === 'drowned' && !far && Math.random() < .08) G.FX.emit(z.x + rnd(-.2, .2), z.y + rnd(.6, 1.5), z.z + rnd(-.2, .2), 0, 0, 0, .6, .7, .75, .6, .03, .8, {});

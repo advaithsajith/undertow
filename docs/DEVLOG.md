@@ -97,3 +97,14 @@ Reference: Reissad Studio's *Bodycam* zombies video. We match the camera treatme
 - **World detail:** Poly Haven distressed painted planks (shutters, doors, eaves), peeling painted wall (blended
   into plaster by world-space noise, plus rain streaks) and brown bark; darker wall bases; window sunshades and
   back/side windows; palm frond atlas with dead fronds and coconuts; leaf-card canopies for broadleaf trees.
+
+## Vehicle lock-up, drive-bys, slides, molotovs (2026-11-15)
+- **Bug:** a zombie that grabbed you kept its grip after you got into a vehicle; if it then died, `P.grabber`
+  was never cleared and every gun and melee action stayed blocked. `kill()` now releases the grab, a watchdog
+  in `P.update` drops any grab that isn't live, you can't board while grabbed, bandaging cancels in a vehicle,
+  and NaN weapon timers are reset.
+- **Drive-by:** guns fire from vehicles, aimed through the chase-camera crosshair from the driver's seat;
+  grenades and molotovs throw from the seat; melee swings reach past bikes and autos.
+- **Slide:** C while sprinting slides about 6 m, lowers the camera, and knocks down infected in the way.
+- **Molotovs:** bigger, longer fire (two pools), flaming rag in flight, smash on bodies, fire spreads between
+  burning infected, standing in fire hurts; start with two, craft two for 18 scrap.

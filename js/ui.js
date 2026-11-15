@@ -51,7 +51,7 @@
     }
     h += `</div></div><div style="margin-top:12px"><button data-close>Close</button></div>`; E.benchC.innerHTML = h;
   }
-  const CRAFT = [['armor', 60, 30, 'Scrap armour (soaks half of 60 dmg)'], ['p', 24, 10, '9mm / .38 rounds'], ['s', 8, 10, '12-bore shells'], ['r', 20, 12, 'Rifle rounds'], ['h', 6, 12, '.303 rounds'], ['meds', 1, 25, 'First-aid kit'], ['frag', 1, 30, 'Grenade'], ['molotov', 1, 15, 'Petrol bomb'], ['b', 6, 8, 'Crossbow bolts'], ['f', 60, 10, 'Sprayer fuel'], ['bottle', 3, 3, 'Glass bottles (lure)'], ['mine', 1, 35, 'Tripmine']];
+  const CRAFT = [['armor', 60, 30, 'Scrap armour (soaks half of 60 dmg)'], ['p', 24, 10, '9mm / .38 rounds'], ['s', 8, 10, '12-bore shells'], ['r', 20, 12, 'Rifle rounds'], ['h', 6, 12, '.303 rounds'], ['meds', 1, 25, 'First-aid kit'], ['frag', 1, 30, 'Grenade'], ['molotov', 2, 18, 'Petrol bombs (molotov)'], ['b', 6, 8, 'Crossbow bolts'], ['f', 60, 10, 'Sprayer fuel'], ['bottle', 3, 3, 'Glass bottles (lure)'], ['mine', 1, 35, 'Tripmine']];
   function benchClick(t) {
     const S = G.S, W = G.Wp, ds = t.dataset; let ok = true;
     if (ds.gun) benchSel = ds.gun;
@@ -117,7 +117,7 @@
     dmgA = Math.max(P.hp < 30 ? .35 + .15 * Math.sin(G.t * 5) : 0, dmgA - dt * .9); E.dmg.style.opacity = P.grabber ? Math.max(dmgA, .6) : dmgA;
     G.postU.uSat.value = P.alive ? clamp(.45 + P.hp / 60, .35, 1) : .1;
     // crosshair
-    const id = W.curId(), D = id && W.DEFS[id], hide = !P.alive || P.veh || st.scoped || (D && st.ads > .6 && D.cls !== 'shotgun');
+    const id = W.curId(), D = id && W.DEFS[id], hide = !P.alive || (P.veh && st.cur === 3) || st.scoped || (D && st.ads > .6 && D.cls !== 'shotgun');
     show(E.cross, !hide); show(E.scope, st.scoped && !P.veh);
     if (!hide) { const sp = D ? lerp(D.hip, D.ads, st.ads) * (P.speed > 2 ? 1.5 : 1) * (P.crouch ? .75 : 1) + st.bloom : .4, g = st.cur === 3 ? 3 : 5 + sp * 6, c = E.ch; c[0].style.cssText = `left:${-g - 8}px;top:-1px;width:8px;height:2px`; c[1].style.cssText = `left:${g}px;top:-1px;width:8px;height:2px`; c[2].style.cssText = `left:-1px;top:${-g - 8}px;width:2px;height:8px`; c[3].style.cssText = `left:-1px;top:${g}px;width:2px;height:8px`; }
     E.hitm.style.opacity = st.hitT > 0 ? 1 : 0; if (st.hitT > 0) E.hitm.className = st.hitHead ? 'head' : '';
