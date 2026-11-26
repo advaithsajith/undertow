@@ -108,3 +108,12 @@ Reference: Reissad Studio's *Bodycam* zombies video. We match the camera treatme
 - **Slide:** C while sprinting slides about 6 m, lowers the camera, and knocks down infected in the way.
 - **Molotovs:** bigger, longer fire (two pools), flaming rag in flight, smash on bodies, fire spreads between
   burning infected, standing in fire hurts; start with two, craft two for 18 scrap.
+
+## Bandage lock-up, weapons panel (2026-11-26)
+- **Bug:** after a bandage, `P.busy` ended at about -5e-16 and the weapon code tested `!P.busy`, so guns and
+  melee stayed blocked until death. Busy now snaps to 0 and the check is `P.busy > 0`. It looked tied to the
+  autorickshaw because boarding mid-bandage happened to reset the timer.
+- **Weapons panel (L):** loadout, ammo and throwables; every gun with its sources; distance and direction to the
+  workbench, Ummer Haji, the nearest unsearched police crate and dropped guns, with a **Guide me** waypoint
+  (`G.guide`) on the HUD marker and both maps.
+- **Ummer Haji** sells the revolver, carbine, pump shotgun, crossbow and (after Kotta) the INSAS.
