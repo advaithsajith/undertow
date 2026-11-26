@@ -212,7 +212,7 @@
 
   /* ---------- per-frame ---------- */
   Wp.update = dt => {
-    const P = G.P, In = G.In, id = Wp.curId(), D = id && DEFS[id], gun = st.gun, canAct = P.alive && !P.grabber && !G.paused && !P.busy, inV = !!P.veh, bikeV = inV && P.veh.T.lean;
+    const P = G.P, In = G.In, id = Wp.curId(), D = id && DEFS[id], gun = st.gun, canAct = P.alive && !P.grabber && !G.paused && !(P.busy > 0), inV = !!P.veh, bikeV = inV && P.veh.T.lean;
     st.comboT -= dt; st.cool -= dt; st.equipT = Math.max(0, st.equipT - dt); st.kick = Math.max(0, st.kick - dt * 7); st.kickR *= Math.max(0, 1 - dt * 9); st.bloom = Math.max(0, st.bloom - dt * 3.2); st.hitT -= dt; st.pumpT = Math.max(0, st.pumpT - dt);
     if (st.flashT > 0) { st.flashT -= dt; if (st.flashT <= 0) G.vmFlash.intensity = 0; }
     for (let i = proj.length - 1; i >= 0; i--) { const p = proj[i]; p.t -= dt; p.v.y -= 16 * dt; const m = p.m; m.position.addScaledVector(p.v, dt); m.rotation.x += dt * 9; m.rotation.z += dt * 6; if (p.k === 'molotov') { G.FX.flame(m.position.x, m.position.y + .1, m.position.z, .5); if ((G.frame & 3) === 0) G.addLight(m.position.x, m.position.y, m.position.z, 0xff8030, 4, 12, 6); } const gy = G.groundAt(m.position.x, m.position.z) + .07; let hit = m.position.y < gy; if (hit) { m.position.y = gy; p.v.y *= -.35; p.v.x *= .55; p.v.z *= .55; } else if (G.blocked(m.position.x, m.position.z, .1) && m.position.y < gy + 3) { p.v.x *= -.4; p.v.z *= -.4; hit = true; } if (!hit && p.k === 'molotov') for (const zb of G.Z.list) if (zb.state !== 'dead' && Math.abs(m.position.y - zb.y - 1) < 1.1 && dist2(zb.x, zb.z, m.position.x, m.position.z) < .5) { hit = true; break; }

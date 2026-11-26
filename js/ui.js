@@ -64,6 +64,28 @@
     else ok = false;
     if (ok) { G.Audio.click(.7); W.rebuild(); renderBench(); }
   }
+  /* ---------- weapons panel: what you carry, every gun, and where to get it ---------- */
+  const SRC = { pistol: 'You start with it.', revolver: 'Reward for VILAKKU (mission 3) · Ummer Haji · raider and riot-police drops · police crates · workbench',
+    smg: 'Raider drops · police crates · Ummer Haji · workbench', dbl: 'Reward for KADAL (mission 4) · raider drops · police crates · workbench',
+    pump: 'Raider and riot-police drops · police crates · Ummer Haji · workbench', insas: 'Reward for KOTTA (mission 6) · Varuna security drops · Ummer Haji after Kotta · workbench after Kotta',
+    ak: 'Reward for PATHRAM (mission 7) · Varuna security drops · workbench after Kotta', enfield: 'Varuna security drops · police crates after Kotta · workbench after Kotta',
+    crossbow: 'Raider drops · police crates · Ummer Haji · workbench', flamer: 'Workbench only' };
+  const AMMO = { p: '9mm/.38', s: 'shells', r: 'rifle', h: '.303', b: 'bolts', f: 'fuel' };
+  function bearing(x, z) { const P = G.P, dx = x - P.x, dz = z - P.z, d = Math.hypot(dx, dz), a = (Math.atan2(dx, -dz) * 180 / Math.PI + 360) % 360; return Math.round(d) + ' m ' + ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(a / 45) % 8]; }
+  function renderArms() {
+    const S = G.S, W = G.Wp, D = W.DEFS, st = W.st, P = G.P; let h = `<h2>WEAPONS</h2><div class="sub">What you carry, and where to get more. <b style="color:var(--gold)">${S.scrap}</b> scrap.</div><h3>LOADOUT</h3><div class="rs">`;
+    S.slots.forEach((id, i) => { h += `<div><span>SLOT ${i + 1}</span>${id ? D[id].name + ' · ' + (st.clip[id] || 0) + '/' + (S.ammo[D[id].ammo] || 0) : '— empty'}</div>`; });
+    h += `<div><span>MELEE (4)</span>${W.MELEE[S.melee].name}</div><div><span>THROW (G · 5)</span>${S.frag || 0} grenade · ${S.molotov || 0} molotov · ${S.bottle || 0} bottle</div><div><span>TRIPMINES (X)</span>${S.mine || 0}</div><div><span>ARMOUR</span>${Math.round(S.armor || 0)}</div></div>`;
+    const places = [['Workbench (home, Thalap)', G.poi.bench.x, G.poi.bench.z, 'builds any gun you don\'t have, melee, attachments']];
+    places.push(['Ummer Haji (fish market, Mappila Bay)', 139.5, 676.5, 'sells guns and ammo']);
+    let pc = null, pd = 1e9; G.lootPts.forEach((p, i) => { if (p.kind !== 'police' || S.looted[i] !== undefined) return; const d = Math.hypot(p.x - P.x, p.z - P.z); if (d < pd) { pd = d; pc = p; } }); if (pc) places.push(['Nearest police ammo crate', pc.x, pc.z, 'ammo, and sometimes a gun']);
+    let gd = null, gdd = 1e9; for (const o of (G.Loot.guns || [])) { const d = Math.hypot(o.g.position.x - P.x, o.g.position.z - P.z); if (d < gdd) { gdd = d; gd = o; } } if (gd) places.push(['Dropped ' + D[gd.id].name, gd.g.position.x, gd.g.position.z, 'lying on the ground, amber beam']);
+    h += `<h3>WHERE TO GET WEAPONS</h3>`; for (const [n, x, z, t] of places) h += `<div class="at" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 0"><div>${n}<small style="display:block;color:var(--dim)">${t} · ${bearing(x, z)}</small></div><button data-guide="${x},${z},${n.replace(/"/g, '')}">Guide me</button></div>`;
+    h += `<h3>ALL FIREARMS</h3><div style="display:grid;grid-template-columns:1fr;gap:4px">`;
+    for (const id in D) { const d = D[id], own = S.guns[id], lock = d.lock && !S[d.lock]; h += `<div style="padding:6px 8px;border:1px solid var(--line);${own ? 'border-color:var(--gold)' : ''}"><b style="color:${own ? 'var(--gold)' : 'inherit'}">${own ? '✓ ' : ''}${d.name}</b> <small style="color:var(--dim)">${AMMO[d.ammo] || ''}${own ? '' : lock ? ' · locked until Kotta' : d.cost ? ' · ' + d.cost + ' scrap at the bench' : ''}</small><small style="display:block;color:var(--dim)">${SRC[id] || ''}</small></div>`; }
+    h += `</div><div style="margin-top:12px"><button data-close>Close <kbd>L</kbd></button></div>`; $('armsC').innerHTML = h;
+  }
+  UI.arms = () => { renderArms(); modal('arms'); };
   UI.bench = fld => { field = !!fld; const id = G.Wp.curId(); if (id) benchSel = id; renderBench(); modal('bench'); };
   UI.boat = from => { const J = G.M.jetties(); E.boatL.innerHTML = J.map((j, i) => i === from ? '' : `<button data-sail="${i}">${j.n}</button>`).join(''); modal('boat'); };
   UI.ending = () => { const S = G.S; E.endT.innerHTML = `The fog rolled over Kannur at first light and the coast went quiet. Behind you the Varuna campus is still burning. ${G.Base.members.filter(m => m.alive).length} of the household are alive to see the quarantine lifted.<br><br><b>${S.stats.kills}</b> infected put down · <b>${S.stats.heads}</b> heads taken · <b>${G.env.day}</b> days · ${S.dead.length ? 'lost: ' + S.dead.map(d => G.Base.FAM[d].name).join(', ') : 'nobody left behind'}`; modal('end'); };
@@ -76,7 +98,7 @@
     for (const l of G.locs) { x.fillStyle = 'rgba(0,0,0,.6)'; const w = x.measureText(l.name).width + 10; x.fillRect(px(l.x) - w / 2, pz(l.z) - 22, w, 17); x.fillStyle = l.id === 'home' ? '#e3b54a' : '#f1ece0'; x.fillText(l.name, px(l.x), pz(l.z) - 9); }
     if (S.boat) { x.fillStyle = '#57b8a8'; for (const j of G.M.jetties()) { x.beginPath(); x.arc(px(j.x), pz(j.z), 5, 0, 7); x.fill(); } }
     const dot = (wx, wz, col, r) => { x.fillStyle = col; x.strokeStyle = '#000'; x.lineWidth = 2; x.beginPath(); x.arc(px(wx), pz(wz), r, 0, 7); x.fill(); x.stroke(); };
-    for (const v of G.Vehs) dot(v.x, v.z, v.type === 'auto' ? '#e8b818' : '#d0d0d0', 3.5); if (S.job) dot(S.job.x, S.job.z, '#57b8a8', 7); if (G.M.target) dot(G.M.target.x, G.M.target.z, '#e3b54a', 8);
+    for (const v of G.Vehs) dot(v.x, v.z, v.type === 'auto' ? '#e8b818' : '#d0d0d0', 3.5); if (S.job) dot(S.job.x, S.job.z, '#57b8a8', 7); if (G.M.target) dot(G.M.target.x, G.M.target.z, '#e3b54a', 8); if (G.guide) dot(G.guide.x, G.guide.z, '#4ad0ff', 8);
     x.save(); x.translate(px(P.x), pz(P.z)); x.rotate(-P.yaw); x.fillStyle = '#fff'; x.strokeStyle = '#000'; x.beginPath(); x.moveTo(0, -11); x.lineTo(7, 8); x.lineTo(0, 4); x.lineTo(-7, 8); x.closePath(); x.fill(); x.stroke(); x.restore();
   }
 
@@ -94,6 +116,7 @@
       if (ds.up) { G.Base.buy(ds.up); renderPanel(); return; }
       if (ds.file) { const f = G.M.FILES[ds.file]; document.getElementById('fileT').innerHTML = '<b>' + f[0] + '</b><br>' + f[1]; return; }
       if (ds.sail) { UI.close(); G.M.sail(+ds.sail); return; }
+      if (ds.guide) { const [gx, gz, ...gl] = ds.guide.split(','); G.guide = { x: +gx, z: +gz, label: gl.join(',') }; UI.close(); UI.msg('Marked on your map and HUD: ' + G.guide.label, 'gold'); return; }
       if (t.closest('#benchC')) benchClick(t);
     });
     document.addEventListener('input', e => { const k = e.target.dataset.set; if (!k) return; G.set[k] = +e.target.value; G.saveSet(); if (k === 'vol') G.Audio.vol(G.set.vol); if (k === 'fol') G.Foliage.dirty(); });
@@ -106,6 +129,7 @@
   UI.update = dt => {
     const P = G.P, S = G.S, W = G.Wp, st = W.st, In = G.In;
     if (G.hit('Tab')) { if (UI.open === 'panel') UI.close(); else if (!UI.open) { renderPanel(); modal('panel'); } }
+    if (G.hit('KeyL') && G.started && G.P.alive) { if (UI.open === 'arms') UI.close(); else if (!UI.open) UI.arms(); }
     if (G.hit('KeyI') && G.started && G.P.alive) { if (UI.open === 'bench') UI.close(); else if (!UI.open) UI.bench(true); }
     if (G.hit('KeyM')) { if (UI.open === 'mapov') UI.close(); else if (!UI.open) { drawBig(); modal('mapov'); } }
     if (G.hit('Escape')) { if (UI.open && UI.open !== 'dead' && UI.open !== 'end') UI.close(); else if (!UI.open) UI.pause(true); }
@@ -132,7 +156,7 @@
     if (P.veh) { E.wname.textContent = P.veh.T.name; E.ammo.innerHTML = `${Math.round(Math.abs(P.veh.sp) * 3.6)}<small> km/h</small>`; }
     else if (st.cur === 3) { E.wname.textContent = W.MELEE[S.melee].name; E.ammo.innerHTML = `<small>LMB swing · hold RMB heavy</small>`; }
     else if (D) { E.wname.textContent = D.name + (st.reloading ? ' · reloading' : ''); E.ammo.innerHTML = `${st.clip[id]}<small> / ${S.ammo[D.ammo]}</small>`; E.ammo.style.color = st.clip[id] <= Math.ceil(W.magSize(id) * .25) ? '#ff7a66' : ''; }
-    E.slots.innerHTML = S.slots.map((g, i) => g ? `<span class="${st.cur === i ? 'on' : ''}">${i + 1} ${W.DEFS[g].name.split(' ').slice(-1)[0]}</span>` : '').join('') + `<span class="${st.cur === 3 ? 'on' : ''}">4 ${W.MELEE[S.melee].name.split(' ')[0]}</span>`;
+    E.slots.innerHTML = S.slots.map((g, i) => g ? `<span class="${st.cur === i ? 'on' : ''}">${i + 1} ${W.DEFS[g].name.split(' ').slice(-1)[0]}</span>` : '').join('') + `<span class="${st.cur === 3 ? 'on' : ''}">4 ${W.MELEE[S.melee].name.split(' ')[0]}</span><span style="opacity:.7"><kbd>L</kbd> weapons</span>`;
     const l = G.locAt(P.x, P.z), h = G.env.hour, e = G.env; E.loc.innerHTML = l ? `${l.name}<small>${l.ml}</small>` : (P.x - G.coast(P.z) < 40 ? 'Arabian Sea shore' : 'Kannur district');
     E.clock.textContent = `DAY ${e.day} · ${String(h | 0).padStart(2, '0')}:${String((h % 1 * 60) | 0).padStart(2, '0')} · ${e.rain > .6 ? 'MONSOON DOWNPOUR' : e.rain > .1 ? 'RAIN' : e.cloud > .55 ? 'OVERCAST' : e.night > .5 ? 'CLEAR NIGHT' : 'CLEAR'}${h > 18.5 && h < 20.5 && S.mission >= 2 ? ' · SIEGE AT 20:30' : ''}`;
     E.obj.innerHTML = G.M.text ? `<b>${G.M.cur ? G.M.cur.title : 'OBJECTIVE'}</b>${G.M.text}` : ''; show(E.job, !!S.job); if (S.job) E.job.textContent = S.job.text + (S.job.st === 1 && S.job.k === 'sos' ? ` — ${Math.ceil(S.job.t)}s` : '');
@@ -142,7 +166,7 @@
     const c = cctx, bh = -P.yaw; c.clearRect(0, 0, 520, 34); c.fillStyle = 'rgba(0,0,0,.28)'; c.fillRect(0, 0, 520, 34); c.textAlign = 'center'; c.font = '700 13px "Segoe UI"';
     for (const [nm, dg] of DIRS) { const a = angDiff(dg * Math.PI / 180, bh); if (Math.abs(a) < 1.25) { c.fillStyle = nm.length === 1 ? '#f1ece0' : 'rgba(241,236,224,.5)'; c.fillText(nm, 260 + a * 200, 22); } }
     const mark = (t, col) => { const a = clamp(angDiff(Math.atan2(t.x - P.x, -(t.z - P.z)), bh), -1.25, 1.25), d = Math.hypot(t.x - P.x, t.z - P.z); c.fillStyle = col; c.beginPath(); c.moveTo(260 + a * 200, 3); c.lineTo(266 + a * 200, 11); c.lineTo(254 + a * 200, 11); c.fill(); c.font = '700 10px "Segoe UI"'; c.fillText(Math.round(d) + 'm', 260 + a * 200, 32); };
-    if (G.M.target) mark(G.M.target, '#e3b54a'); if (S.job) mark(S.job, '#57b8a8');
+    if (G.M.target) mark(G.M.target, '#e3b54a'); if (G.guide) mark(G.guide, '#4ad0ff'); if (S.job) mark(S.job, '#57b8a8');
     // minimap (north up, 150 m across)
     const m = mctx, WD = G.W, R = 88, k = 176 / 150; m.save(); m.beginPath(); m.arc(R, R, R, 0, 7); m.clip(); m.imageSmoothingEnabled = true;
     m.drawImage(G.mapCanvas, (P.x - 75 - WD.X0) / 4, (P.z - 75 - WD.Z0) / 4, 37.5, 37.5, 0, 0, 176, 176);
@@ -150,7 +174,7 @@
     if (S.perk.scout) G.lootPts.forEach((p, i) => { if (S.looted[i] === undefined) dot(p.x, p.z, 'rgba(255,255,255,.8)', 1.6); });
     for (const z of G.Z.list) if (z.state !== 'dead' && (z.chasing || z.dT < 30 || Math.hypot(z.x - P.x, z.z - P.z) < 30)) dot(z.x, z.z, z.human ? (z.T.hostile ? '#ffb030' : '#ffffff') : z.type === 'brute' ? '#ff9020' : '#ff3a2a', z.type === 'brute' ? 4 : 2.6);
     for (const mb of B.members) if (mb.alive && !mb.away) dot(mb.x, mb.z, mb.down ? '#ff3a2a' : '#8fd17a', 3);
-    for (const v of G.Vehs) dot(v.x, v.z, v.type === 'auto' ? '#e8b818' : '#d8d8d8', 3, v === G.Veh); dot(230, 150, '#e3b54a', 3, true); if (S.job) dot(S.job.x, S.job.z, '#57b8a8', 5, true); if (G.M.target) dot(G.M.target.x, G.M.target.z, '#ffd24a', 5.5, true);
+    for (const v of G.Vehs) dot(v.x, v.z, v.type === 'auto' ? '#e8b818' : '#d8d8d8', 3, v === G.Veh); dot(230, 150, '#e3b54a', 3, true); if (S.job) dot(S.job.x, S.job.z, '#57b8a8', 5, true); if (G.M.target) dot(G.M.target.x, G.M.target.z, '#ffd24a', 5.5, true); if (G.guide) dot(G.guide.x, G.guide.z, '#4ad0ff', 5.5, true);
     m.translate(R, R); m.rotate(-P.yaw); m.fillStyle = '#fff'; m.strokeStyle = '#000'; m.lineWidth = 1.5; m.beginPath(); m.moveTo(0, -8); m.lineTo(5.5, 6); m.lineTo(0, 3); m.lineTo(-5.5, 6); m.closePath(); m.fill(); m.stroke(); m.restore();
   };
 })();

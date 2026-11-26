@@ -1,7 +1,7 @@
 {
   "name": "undertow",
   "productName": "Undertow",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Undertow - The Last Monsoon",
   "main": "electron-main.js",
   "license": "SEE LICENSE IN LICENSE",

@@ -90,8 +90,11 @@ silent kills), from searching houses and shops, from finishing missions and from
 - **Field crafting:** press **I** anywhere to turn scrap into ammo, first-aid kits, grenades, petrol bombs,
   bottles, tripmines, crossbow bolts, sprayer fuel and **scrap armour**, which soaks half the damage you take
   until it breaks.
-- Two traders swap goods for scrap: **Kunjappan** at the Thalap tea shop and **Ummer Haji** at the Mappila Bay
-  fish market.
+- **Ummer Haji** at the Mappila Bay fish market sells guns (revolver, carbine, pump shotgun, crossbow, and the
+  INSAS after Kotta) as well as ammo. **Kunjappan** at the Thalap tea shop sells food, first aid and petrol bombs.
+- Press **L** for the weapons panel: your loadout and ammo, every gun with where to get it, and the distance
+  to the workbench, Ummer Haji, the nearest unsearched police crate and any dropped gun. **Guide me** puts a
+  marker on your HUD and map.
 
 Supplies **glint** in the world: walk up and hold **E**. Watch your **food**; the family eats every day and morale
 drops when they go hungry.

@@ -143,7 +143,7 @@
     if (P.grabber) { P.hurtT = Math.min(P.hurtT, .3); P.hp -= 5 * dt; P.shake = Math.max(P.shake, .35); const z = P.grabber; P.yaw += angDiff(Math.atan2(z.x - P.x, z.z - P.z) + Math.PI, P.yaw) * Math.min(1, dt * 8); if (G.hit('KeyF') || G.hit('KeyE') || In.mp[0]) { P.grabN++; P.shake = .6; if (P.grabN >= 5) { const dx = z.x - P.x, dz = z.z - P.z, d = Math.hypot(dx, dz) || 1; P.grabber = null; G.Z.knock(z, dx / d, dz / d, 5); G.FX.blood(z.x, z.y + 1.4, z.z, dx / d, .3, dz / d, 5); G.Audio && G.Audio.thud(true); P.dodgeT = .6; } } if (P.hp <= 0 && P.alive) P.hurt(1, z.x, z.z, 'bite'); }
     { let inF = false; for (const f of G.FX.fires) if (dist2(P.x, P.z, f.x, f.z) < f.r * f.r * .7 && P.y < f.y + 1) { inF = true; break; } if (inF) { P.fireT = (P.fireT || 0) + dt; if (P.fireT > .35) { P.fireT = 0; P.hurt(5, P.x + .1, P.z, 'fire'); G.UI && G.UI.msg('You are standing in fire!', 'red'); } } }
     if (free && G.hit('KeyH') && G.S.meds > 0 && P.hp < P.maxHp - 1) { P.busy = 1.3; P.busyLabel = 'Bandaging…'; P.busyMax = 1.3; P.busyFn = () => { G.S.meds--; P.heal(55 * (G.S.perk && G.S.perk.medic ? 1.4 : 1)); G.UI && G.UI.msg('Used first-aid kit', 'green'); }; G.Audio && G.Audio.click(.4); }
-    if (P.busy > 0) { P.busy -= dt; if (P.busy <= 0 && P.busyFn) { const fn = P.busyFn; P.busyFn = null; fn(); } }
+    if (P.busy > 0) { P.busy -= dt; if (P.busy <= 0) { P.busy = 0; if (P.busyFn) { const fn = P.busyFn; P.busyFn = null; fn(); } } } else if (P.busy !== 0) P.busy = 0;
     if (G.hit('KeyT')) { P.lightOn = !P.lightOn; G.Audio && G.Audio.click(.8); }
     if (G.hit('KeyB')) { P.tps = !P.tps; G.set.tps = P.tps; G.saveSet(); G.UI && G.UI.msg(P.tps ? 'Over-the-shoulder view' : 'First-person view', 'dim'); }
     P.loud = Math.max(0, P.loud - dt * 2);
